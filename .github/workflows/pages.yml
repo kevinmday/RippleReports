@@ -17,35 +17,52 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Install deps
         run: pip install -r requirements.txt
+
+      # If no API key is provided, force mock mode so render.py won’t hit a real LLM.
+      - name: Decide mock mode
+        run: |
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "RIPPLEWRITER_MOCK=1" >> $GITHUB_ENV
+            echo "Mock mode enabled (no OPENAI_API_KEY)."
+          else
+            echo "OPENAI_API_KEY is set; using real model."
+          fi
 
       - name: Render site
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          RIPPLEWRITER_MOCK: ${{ vars.RIPPLEWRITER_MOCK }}
+          RIPPLEWRITER_MOCK: ${{ env.RIPPLEWRITER_MOCK }}
         run: python render.py
 
-      - name: Upload site artifact (output/)
+      - name: Verify artifact exists
+        run: |
+          test -f output/index.html
+          echo "Found output/index.html"
+
+      - name: Upload Pages artifact (output/)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: output   # <<<<<< publish output/ as the site root
+          path: output
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
