@@ -1,0 +1,42 @@
+﻿---
+layout: post
+title: "{{ title }}"
+author: "{{ author }}"
+date: {{ date }}
+categories: [{{ publish.category | default('oped') }}]
+tags: [{% for t in publish.tags or [] %}{{ t }}{% if not loop.last %}, {% endif %}{% endfor %}]
+permalink: /posts/{{ slug }}/
+---
+
+> **Thesis**: {{ thesis }}
+
+{% if lede %}
+## Lede
+{{ lede }}
+{% endif %}
+
+{% if body %}
+## Body
+{{ body }}
+{% endif %}
+
+{% if counterpoints %}
+## Counterpoints & Limits
+{{ counterpoints }}
+{% endif %}
+
+{% if conclusion %}
+## Conclusion
+{{ conclusion }}
+{% endif %}
+
+---
+
+### Notes & Sources
+- Audience: {{ audience }}
+- Tone: {{ tone }}
+- Outline: {% for item in outline %}- {{ item }}
+  {% endfor %}
+- Claims:
+{% for c in claims %}- **{{ c.claim }}** — sources: {{ ', '.join(c.evidence or []) }}
+{% endfor %}
