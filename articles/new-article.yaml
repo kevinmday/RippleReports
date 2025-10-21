@@ -1,0 +1,19 @@
+title: Untitled
+author: RippleWriter AI
+date: '2025-10-21'
+slug: untitled
+thesis: One-line thesis of the op-ed.
+audience: general readers
+tone: plain-spoken
+outline:
+- 'Lede: hook, why now'
+- 'Body: main points'
+- Counterpoints & limits
+- Conclusion
+claims: []
+images: []
+publish:
+  draft: false
+  category: oped
+  tags:
+  - ripplewriter
