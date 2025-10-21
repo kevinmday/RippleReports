@@ -1,0 +1,5 @@
+﻿# Global defaults used by llm_client.py and render.py
+site_name: RippleReports
+base_url: /   # Set to your custom domain path if using one
+model: gpt-4.1-mini
+mock: false   # set true to bypass API calls during CI tests

@@ -1,0 +1,31 @@
+﻿# === Metadata ===
+title: "RippleWriter Launch"
+author: "RippleWriter AI"
+date: "2025-10-20"
+slug: ripplewriter-launch
+
+# === Positioning ===
+thesis: >
+  We can publish opinion pieces faster by drafting from YAML and auto-rendering to GitHub Pages.
+audience: "general readers"
+tone: "plain-spoken, evidence-aware, forward-leaning"
+
+# === Outline ===
+outline:
+  - "Lede: hook, why now"
+  - "Problem framing"
+  - "Approach / argument"
+  - "Counterpoints & limits"
+  - "Call-to-action / close"
+
+# === Claims (optional) ===
+claims:
+  - claim: "Structured prompts reduce hallucination risk."
+    evidence: ["Example source one", "Example source two"]
+
+images: []
+
+publish:
+  draft: false
+  category: "oped"
+  tags: [ripplewriter]
