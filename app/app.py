@@ -329,19 +329,23 @@ with tab_source:
                     pass
         combined_text = "\n\n".join([t for t in [paste_text] + file_texts if t])
 
-    # --- Paste/Drop screenshots (images) ---
-
-
+    # ----------------------------------------------------------
+# 📸 Paste or drop screenshots (images)
+# ----------------------------------------------------------
 st.markdown("### Paste or drop screenshots (images)")
-st.caption("Click inside the gray box below, then press **Ctrl+V** to paste a screenshot directly from your clipboard. You can also drag & drop images.")
+st.caption(
+    "Click inside the gray box below, then press **Ctrl+V** to paste a screenshot directly "
+    "from your clipboard. You can also drag & drop images."
+)
 
 img_uploads = st.file_uploader(
-    "📎 Paste or drop screenshots here",
+    "📎 Paste or drop screenshots here",       # <-- this text appears above the gray box
     type=["png", "jpg", "jpeg", "webp"],
     accept_multiple_files=True,
     key="rw_image_pastebox",
-    label_visibility="visible"   # forces the visible box
+    label_visibility="visible"                 # <-- this is what forces the gray box to show
 )
+
 
 # Keep a session list so images pasted *before* 'Analyze & Draft' aren't lost
 if "rw_images" not in st.session_state:
