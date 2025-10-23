@@ -3,10 +3,12 @@ import sys
 import pathlib
 import subprocess
 from typing import List, Dict, Any
+import time
 import yaml
 import streamlit as st
 from datetime import date
-from git import Repo, GitCommandError  # GitPython
+from git import Repo, GitCommandError
+from streamlit_paste_button import paste_image_button
 
 # Ensure parent folder is on sys.path so we can import llm_client.py
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -151,6 +153,83 @@ def article_from_source_text(
     base["slug"] = "".join(c.lower() if c.isalnum() else "-" for c in base["title"]).strip("-") or "untitled"
     return base
 
+# --- Image ingest UI (paste + drag/drop) used ONLY on Source→Draft ---
+def ui_image_ingest():
+    st.markdown("### Paste or drop screenshots (images)")
+
+    # Ensure session image list exists
+    if "rw_images" not in st.session_state:
+        st.session_state["rw_images"] = []
+
+    st.caption(
+        "1) Click the button below to focus it, then press **Ctrl+V** to paste from your clipboard. "
+        "2) Or drag & drop image files into the box underneath."
+    )
+
+    # Clipboard paste
+    _res = paste_image_button(label="📌 Paste image from clipboard", key="rw_pastebtn")
+    pasted_img = None
+    try:
+        if _res is not None and getattr(_res, "image_data", None) is not None:
+            pasted_img = _res.image_data  # wrapper case
+    except Exception:
+        if _res is not None:
+            pasted_img = _res  # direct PIL.Image
+
+    if pasted_img is not None:
+        images_dir = ARTICLES_DIR / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        fname = f"pasted_{int(time.time())}.png"
+        save_path = images_dir / fname
+        pasted_img.save(save_path, format="PNG")
+        st.session_state["rw_images"].append({"filename": fname, "path": str(save_path)})
+        st.success(f"📸 Pasted image saved → articles/images/{fname}")
+        st.image(pasted_img, width=160, caption=fname)
+
+    st.markdown("---")
+
+    # Drag & drop uploader
+    st.caption("Or drag & drop image files (PNG/JPG/WEBP) below, or click **Browse files**.")
+    img_uploads = st.file_uploader(
+        "Drag and drop files here",
+        type=["png", "jpg", "jpeg", "webp"],
+        accept_multiple_files=True,
+        key="rw_image_drop",
+        label_visibility="visible",
+    )
+
+    if img_uploads:
+        captured = []
+        images_dir = ARTICLES_DIR / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        for f in img_uploads:
+            try:
+                safe = pathlib.Path(f.name).name
+                dest = images_dir / safe
+                dest.write_bytes(f.getbuffer())
+                captured.append({"filename": safe, "path": str(dest)})
+            except Exception as e:
+                st.warning(f"⚠️ Could not save image {f.name}: {e}")
+        if captured:
+            st.session_state["rw_images"].extend(captured)
+            st.success(f"✅ Saved {len(captured)} image(s).")
+            for e in captured:
+                st.image(e["path"], width=160, caption=e["filename"])
+
+# ---------- load YAML format templates ----------
+FORMATS_FILE = ROOT / "config" / "formats.yaml"
+
+def load_format_templates() -> Dict[str, Any]:
+    if not FORMATS_FILE.exists():
+        st.warning("⚠️ No format templates found in /config/formats.yaml")
+        return {}
+    try:
+        return yaml.safe_load(FORMATS_FILE.read_text(encoding="utf-8")) or {}
+    except Exception as e:
+        st.error(f"Error reading formats.yaml: {e}")
+        return {}
+
+FORMAT_TEMPLATES = load_format_templates()
 
 # ---------- sidebar ----------
 st.sidebar.header("RippleWriter Studio")
@@ -169,7 +248,6 @@ st.title("📝 RippleWriter Studio")
 
 tab_compose, tab_source = st.tabs(["Compose (YAML)", "Source → Draft"])
 
-# -------------------------
 # Tab 1: Compose (YAML)
 # -------------------------
 with tab_compose:
@@ -177,34 +255,98 @@ with tab_compose:
 
     with colL:
         st.subheader("Drafts (YAML)")
+
+        # Always have a data dict so we don't reference-before-assign
+        data: Dict[str, Any] = {}
+
         files = list_yaml_files()
         names = [f.name for f in files]
         choice = st.selectbox("Select draft", ["(new)"] + names, index=0)
 
+        # ---- shared option lists (used for new + existing) ----
+        format_options = [
+            "Op-Ed", "Academic Paper", "Technical Report", "Press Release",
+            "Social Media Post", "Legal Brief", "Lesson Plan",
+            "Engineering Design Doc", "Zoology Field Note",
+            "Dissertation Proposal", "Product Spec", "Grant Proposal"
+        ]
+        intention_options = [
+            "None",
+            "Clarity × Credibility × Evidence",
+            "Problem → Insight → Outcome",
+            "Risk–Reward Matrix",
+            "Causal Chain",
+            "5W1H",
+            "Narrative Arc (Setup → Conflict → Resolution)"
+        ]
+
         if choice == "(new)":
             new_name = st.text_input("New file name", value="new-article.yaml")
+
+            # NEW: format & intention equation for new drafts
+            new_format = st.selectbox(
+                "Format",
+                format_options,
+                index=0,
+                help="Choose the document pattern to prefill structure/expectations."
+            )
+            new_equation = st.selectbox(
+                "Intention Equation",
+                intention_options,
+                index=0,
+                help="Pick the intention framework to apply later in meta-analysis."
+            )
+
             create_btn = st.button("Create draft from template")
             if create_btn:
                 p = ARTICLES_DIR / new_name
                 if p.exists():
                     st.warning("File already exists.")
                 else:
-                    data = default_article()
-                    save_yaml(p, data)
+                    payload = default_article()
+                    payload["format"] = new_format
+                    payload["intention_equation"] = new_equation
+                    save_yaml(p, payload)
                     st.success(f"Created {p.name}. Select it from the list above.")
                     st.stop()
+
             st.info("Choose an existing draft from the dropdown, or create a new one.")
+
         else:
             current_path = ARTICLES_DIR / choice
             data = load_yaml(current_path)
 
+            # Existing draft fields
             st.text_input("Title", value=data.get("title", ""), key="title")
             st.text_input("Author", value=data.get("author", "RippleWriter AI"), key="author")
             st.text_input("Slug", value=data.get("slug", ""), key="slug")
             st.text_area("Thesis", value=data.get("thesis", ""), height=100, key="thesis")
             st.text_input("Audience", value=data.get("audience", "general readers"), key="audience")
             st.text_input("Tone", value=data.get("tone", "plain-spoken"), key="tone")
-            st.text_area("Outline (one per line)", value="\n".join(data.get("outline", [])), height=120, key="outline_text")
+            st.text_area(
+                "Outline (one per line)",
+                value="\n".join(data.get("outline", [])),
+                height=120,
+                key="outline_text"
+            )
+
+            # NEW: format & intention equation for existing drafts
+            cur_format = data.get("format", format_options[0])
+            cur_equation = data.get("intention_equation", intention_options[0])
+            data["format"] = st.selectbox(
+                "Format",
+                format_options,
+                index=max(0, format_options.index(cur_format) if cur_format in format_options else 0),
+                key="format_select",
+                help="Document pattern used for this draft."
+            )
+            data["intention_equation"] = st.selectbox(
+                "Intention Equation",
+                intention_options,
+                index=max(0, intention_options.index(cur_equation) if cur_equation in intention_options else 0),
+                key="intention_select",
+                help="Intention framework to guide meta-analysis."
+            )
 
             if st.button("💾 Save YAML"):
                 data["title"] = st.session_state["title"]
@@ -213,21 +355,27 @@ with tab_compose:
                 data["thesis"] = st.session_state["thesis"]
                 data["audience"] = st.session_state["audience"]
                 data["tone"] = st.session_state["tone"]
-                data["outline"] = [line.strip() for line in st.session_state["outline_text"].splitlines() if line.strip()]
+                data["outline"] = [
+                    line.strip() for line in st.session_state["outline_text"].splitlines() if line.strip()
+                ]
+                # keep / backfill standard fields
                 for k in ("claims", "images", "publish", "date"):
                     if k not in data:
                         if k == "publish":
                             data[k] = {"draft": False, "category": "oped", "tags": ["ripplewriter"]}
                         else:
                             data[k] = [] if k in ("claims", "images") else str(date.today())
+
                 save_yaml(current_path, data)
                 st.success("Saved.")
 
         st.markdown("---")
         st.subheader("Assistant")
+
+        # Generate sections (only if a draft is open)
         gen_cols = st.columns(2)
         with gen_cols[0]:
-            if st.button("✍️ Generate sections with LLM"):
+            if st.button("✍️ Generate sections with LLM", disabled=(choice == "(new)")):
                 try:
                     llm = LLMClient()
                     if mock_mode:
@@ -236,24 +384,25 @@ with tab_compose:
                         os.environ["OPENAI_API_KEY"] = openai_key
 
                     to_send = default_article()
-                    for k in ("title", "thesis", "audience", "tone", "outline", "claims"):
+                    # Only copy keys present in the currently loaded draft
+                    for k in ("title", "thesis", "audience", "tone", "outline", "claims",
+                              "format", "intention_equation"):
                         if k in data:
                             to_send[k] = data[k]
 
                     sections = llm.write_post_sections(to_send)
                     data["generated_sections"] = sections
-                    save_yaml(current_path, data)
+                    if choice != "(new)":
+                        save_yaml(ARTICLES_DIR / choice, data)
                     st.success("Sections generated and saved into YAML (generated_sections).")
                     st.json(sections)
                 except Exception as e:
                     st.error(f"LLM error: {e}")
 
         with gen_cols[1]:
-            if choice != "(new)":
-                paths_arg = [str(ARTICLES_DIR / choice)]
-            else:
-                paths_arg = []
-            if st.button("🛠️ Render this draft"):
+            # If no specific file selected, render all articles
+            paths_arg = [str(ARTICLES_DIR / choice)] if choice != "(new)" else []
+            if st.button("🛠️ Render this draft", disabled=(choice == "(new)")):
                 env_vars = {}
                 if openai_key:
                     env_vars["OPENAI_API_KEY"] = openai_key
@@ -293,7 +442,7 @@ with tab_compose:
 # -------------------------
 with tab_source:
     st.subheader("Source → Draft (paste or drop files)")
-    colA, colB = st.columns([2, 1])
+    colA, colB = st.columns([2, 1])  # keep colB for future metadata/actions
 
     # ---- left: inputs ----
     with colA:
@@ -309,16 +458,6 @@ with tab_source:
             accept_multiple_files=True,
         )
 
-        st.markdown("### Paste or drop screenshots (images)")
-        st.caption("Click the area below, then press **Ctrl+V** to paste a screenshot. Drag & drop works too.")
-        img_uploads = st.file_uploader(
-            "Paste or drop images",
-            type=["png", "jpg", "jpeg", "webp"],
-            accept_multiple_files=True,
-            label_visibility="collapsed",
-            key="rw_image_uploader",
-        )
-
         # Build combined text from paste + files
         file_texts: List[str] = []
         if files_up:
@@ -329,134 +468,9 @@ with tab_source:
                     pass
         combined_text = "\n\n".join([t for t in [paste_text] + file_texts if t])
 
-    # ----------------------------------------------------------
-# 📸 Paste or drop screenshots (images)
-# ----------------------------------------------------------
-st.markdown("### Paste or drop screenshots (images)")
-st.caption(
-    "Click inside the gray box below, then press **Ctrl+V** to paste a screenshot directly "
-    "from your clipboard. You can also drag & drop images."
-)
-
-img_uploads = st.file_uploader(
-    "📎 Paste or drop screenshots here",       # <-- this text appears above the gray box
-    type=["png", "jpg", "jpeg", "webp"],
-    accept_multiple_files=True,
-    key="rw_image_pastebox",
-    label_visibility="visible"                 # <-- this is what forces the gray box to show
-)
+        # 🔽 Single, unified image ingest UI (paste + drag/drop)
+        ui_image_ingest()
 
 
-# Keep a session list so images pasted *before* 'Analyze & Draft' aren't lost
-if "rw_images" not in st.session_state:
-    st.session_state["rw_images"] = []
-
-image_folder = ARTICLES_DIR / "images"
-image_folder.mkdir(exist_ok=True)
-
-# Save any pasted/dropped files immediately
-if img_uploads:
-    captured = []
-    for f in img_uploads:
-        # Use a safe name, write to disk, and record metadata
-        safe_name = pathlib.Path(f.name).name
-        dest = image_folder / safe_name
-        dest.write_bytes(f.getbuffer())
-
-        entry = {
-            "filename": safe_name,
-            "path": str(dest)
-        }
-        captured.append(entry)
-
-    st.session_state["rw_images"].extend(captured)
-
-    st.success(f"✅ Captured {len(captured)} image(s) from clipboard or drag/drop.")
-    for e in captured:
-        st.image(e["path"], width=160, caption=e["filename"])
-
-
-    # ---- right: metadata + action ----
-    with colB:
-        st.write("Draft metadata")
-        s_title  = st.text_input("Title", value="Untitled")
-        s_author = st.text_input("Author", value="RippleWriter AI")
-        s_aud    = st.text_input("Audience", value="general readers")
-        s_tone   = st.text_input("Tone", value="plain-spoken")
-        s_thesis = st.text_input("Thesis hint (optional)", value="")
-
-        go_cols = st.columns([1, 1])
-        with go_cols[0]:
-            run_btn = st.button("🔎 Analyze & Draft")
-        with go_cols[1]:
-            save_as = st.text_input("Save as (YAML filename)", value="from-source.yaml")
-
-    st.markdown("---")
-
-    # ---- pipeline ----
-    if run_btn:
-        if not combined_text.strip():
-            st.warning("Please paste text or drop at least one file.")
-        else:
-            with st.spinner("Analyzing and drafting…"):
-                # 1) Build article from source text
-                article = article_from_source_text(
-                    combined_text,
-                    title=s_title,
-                    author=s_author,
-                    thesis_hint=(s_thesis or None),
-                    audience=s_aud,
-                    tone=s_tone,
-                    openai_key=(openai_key or None),
-                    mock_mode=mock_mode,
-                )
-
-                # 2) Save images (if any) under articles/images/ and record entries
-                if img_uploads:
-                    image_folder = ARTICLES_DIR / "images"
-                    image_folder.mkdir(exist_ok=True)
-
-                    image_metadata: List[Dict[str, str]] = []
-                    for img_file in img_uploads:
-                        try:
-                            img_path = image_folder / img_file.name
-                            with open(img_path, "wb") as f:
-                                f.write(img_file.getbuffer())
-                            image_metadata.append(
-                                {
-                                    "filename": img_file.name,
-                                    "path": str(img_path),
-                                }
-                            )
-                        except Exception as e:
-                            st.warning(f"⚠️ Could not save image {img_file.name}: {e}")
-
-                    article["images"] = image_metadata
-
-                # 3) Save YAML
-                target = ARTICLES_DIR / save_as
-                save_yaml(target, article)
-                st.success(f"Draft saved to articles/{save_as}")
-
-                # 4) Optional: preview sections
-                if "generated_sections" in article:
-                    with st.expander("Generated sections"):
-                        st.json(article["generated_sections"])
-
-                # 5) Render immediately
-                env_vars: Dict[str, str] = {}
-                if openai_key:
-                    env_vars["OPENAI_API_KEY"] = openai_key
-                if mock_mode:
-                    env_vars["RIPPLEWRITER_MOCK"] = "1"
-
-                proc = render_selected([str(target)], env_vars)
-                if proc.returncode == 0:
-                    st.success("Rendered successfully to /output.")
-                    idx = OUTPUT_DIR / "index.html"
-                    if idx.exists():
-                        st.markdown(f"[Open site index (local file)]({idx.as_uri()})")
-                else:
-                    st.error("Render failed.")
-                with st.expander("Render logs"):
-                    st.code(proc.stdout + "\n" + proc.stderr)
+ 
+ 

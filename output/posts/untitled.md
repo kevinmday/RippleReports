@@ -1,15 +1,14 @@
 ﻿---
 layout: post
-title: "RippleWriter Launch"
+title: "Untitled"
 author: "RippleWriter AI"
-date: 2025-10-20
+date: 2025-10-21
 categories: [oped]
 tags: [ripplewriter]
-permalink: /posts/ripplewriter-launch/
+permalink: /posts/untitled/
 ---
 
-> **Thesis**: We can publish opinion pieces faster by drafting from YAML and auto-rendering to GitHub Pages.
-
+> **Thesis**: One-line thesis of the op-ed.
 
 
 ## Lede
@@ -36,12 +35,10 @@ Let's publish with receipts and iteration hooks.
 
 ### Notes & Sources
 - Audience: general readers
-- Tone: plain-spoken, evidence-aware, forward-leaning
+- Tone: plain-spoken
 - Outline: - Lede: hook, why now
-  - Problem framing
-  - Approach / argument
+  - Body: main points
   - Counterpoints & limits
-  - Call-to-action / close
+  - Conclusion
   
 - Claims:
-- **Structured prompts reduce hallucination risk.** — sources: Example source one, Example source two

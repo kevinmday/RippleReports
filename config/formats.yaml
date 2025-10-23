@@ -1,0 +1,78 @@
+formats:
+  Op-Ed:
+    description: "Opinion piece designed to persuade general audiences."
+    sections:
+      - "Lede: why now, why it matters"
+      - "Main Argument"
+      - "Counterpoint"
+      - "Conclusion / Call to Action"
+    tone: "plain-spoken"
+    intention_equation: "Persuasion / CTA"
+
+  Academic Paper:
+    description: "Formal research article suitable for academic or scientific publication."
+    sections:
+      - "Abstract"
+      - "Introduction"
+      - "Methods"
+      - "Results"
+      - "Discussion"
+      - "References"
+    tone: "formal"
+    intention_equation: "Clarity / Informational"
+
+  Technical Report:
+    description: "Engineering or scientific report documenting findings and recommendations."
+    sections:
+      - "Executive Summary"
+      - "Background"
+      - "Methodology"
+      - "Findings"
+      - "Recommendations"
+      - "Appendices"
+    tone: "neutral"
+    intention_equation: "Trust Calibration"
+
+  Legal Brief:
+    description: "Structured argument with facts, issues, and supporting case law."
+    sections:
+      - "Statement of Facts"
+      - "Issues"
+      - "Argument"
+      - "Conclusion"
+    tone: "precise"
+    intention_equation: "RippleTruth / Logic Verification"
+
+  Zoological Field Report:
+    description: "Observational report of animal behavior or ecological study."
+    sections:
+      - "Observation Summary"
+      - "Habitat"
+      - "Behavioral Data"
+      - "Interpretation"
+      - "Appendices"
+    tone: "objective"
+    intention_equation: "Clarity / Informational"
+
+  Classroom Lesson Plan:
+    description: "Instructional plan for educators with clear learning outcomes."
+    sections:
+      - "Objectives"
+      - "Materials"
+      - "Procedure"
+      - "Assessment"
+      - "Extensions"
+    tone: "instructional"
+    intention_equation: "Engagement / Retention"
+
+  Dissertation Chapter:
+    description: "Long-form academic writing with depth, citations, and argumentation."
+    sections:
+      - "Introduction"
+      - "Literature Review"
+      - "Methods"
+      - "Findings"
+      - "Discussion"
+      - "Conclusion"
+    tone: "academic"
+    intention_equation: "Depth / Coherence"
