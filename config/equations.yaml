@@ -1,0 +1,26 @@
+# config/equations.yaml
+equations:
+  - id: "none"
+    name: "None"
+    desc: "Skip intention math."
+    weights: { coherence: 0, evidence: 0, novelty: 0, clarity: 0, sentiment: 0 }
+
+  - id: "fils"
+    name: "FILS — First-Impact Likelihood Score"
+    desc: "Probability that the first exposure creates a durable belief update."
+    weights: { coherence: 0.35, evidence: 0.30, novelty: 0.15, clarity: 0.15, sentiment: 0.05 }
+
+  - id: "ucip"
+    name: "UCIP — Universal Coherence/Impact Potential"
+    desc: "Amplitude of ripple across diverse contexts."
+    weights: { coherence: 0.30, evidence: 0.25, novelty: 0.25, clarity: 0.10, sentiment: 0.10 }
+
+  - id: "ttcf"
+    name: "TTCF — Time-to-Convergence Factor"
+    desc: "How quickly the audience reaches shared understanding."
+    weights: { coherence: 0.40, evidence: 0.20, novelty: 0.10, clarity: 0.25, sentiment: 0.05 }
+
+  - id: "persuasion"
+    name: "Persuasion-First"
+    desc: "Optimizes for conversion/behavioral shift."
+    weights: { coherence: 0.25, evidence: 0.20, novelty: 0.15, clarity: 0.20, sentiment: 0.20 }
