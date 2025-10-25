@@ -21,7 +21,31 @@ from llm_client import LLMClient
 ARTICLES_DIR = ROOT / "articles"
 OUTPUT_DIR   = ROOT / "output"
 
-st.set_page_config(page_title="RippleWriter Studio", page_icon="📝", layout="wide")
+# Define brand assets
+BRAND_DIR = ROOT / "app" / "static" / "branding"
+LOGO_PNG  = BRAND_DIR / "ripple-logo.png"
+LOGO_SVG  = BRAND_DIR / "ripple-logo.svg"
+
+# --- Branded header (logo + title) ---
+def render_header():
+    logo_exists = LOGO_PNG.exists()
+    col_logo, col_title = st.columns([1, 12], vertical_alignment="center")
+    with col_logo:
+        if logo_exists:
+            st.image(str(LOGO_PNG), use_column_width=True)
+        else:
+            st.markdown("### 🌀")  # fallback
+    with col_title:
+        st.markdown(
+            """
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <h1 style="margin:0;">RippleWriter Studio</h1>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+render_header()
 
 # ---------- helpers ----------
 def list_yaml_files() -> List[pathlib.Path]:
@@ -39,6 +63,29 @@ def load_yaml(p: pathlib.Path) -> Dict[str, Any]:
 
 def save_yaml(p: pathlib.Path, data: Dict[str, Any]) -> None:
     p.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+def preview_yaml_box(data: Dict[str, Any], filename: str = "draft.yaml") -> None:
+    """
+    Show a YAML preview and a download button for the current in-memory draft.
+    Safe to call even if `data` is empty.
+    """
+    try:
+        yml_text = yaml.safe_dump(data or {}, sort_keys=False, allow_unicode=True)
+    except Exception as e:
+        st.warning(f"Could not serialize YAML for preview: {e}")
+        yml_text = "# <serialization error>"
+
+    st.markdown("#### YAML preview")
+    st.code(yml_text, language="yaml")
+
+    # Download as a file (no need to write to disk)
+    st.download_button(
+        label="⬇️ Download YAML",
+        data=yml_text.encode("utf-8"),
+        file_name=filename,
+        mime="text/yaml",
+        use_container_width=True,
+    )
 
 def render_selected(paths: List[str], env_vars: Dict[str, str]) -> subprocess.CompletedProcess:
     # render.py already accepts file globs; we pass paths (or nothing to render all)
@@ -231,6 +278,88 @@ def load_format_templates() -> Dict[str, Any]:
 
 FORMAT_TEMPLATES = load_format_templates()
 
+# ---------- intention / meta-analysis helpers ----------
+
+CONFIG_DIR = ROOT / "config"
+EQUATIONS_PATH = CONFIG_DIR / "equations.yaml"
+
+def load_equations() -> list[dict[str, Any]]:
+    try:
+        if EQUATIONS_PATH.exists():
+            cfg = yaml.safe_load(EQUATIONS_PATH.read_text(encoding="utf-8")) or {}
+            eqs = cfg.get("equations", [])
+            for e in eqs:
+                e.setdefault("id", e.get("name", "unnamed").lower().replace(" ", "-"))
+                e.setdefault("name", e.get("id", "Unnamed").title())
+                e.setdefault("desc", "")
+                e.setdefault("weights", {})
+            return eqs
+    except Exception as e:
+        st.warning(f"Could not load equations.yaml: {e}")
+    return [{"id": "none", "name": "None", "desc": "", "weights": {}}]
+
+
+def extract_claims_for_scoring(article: dict[str, Any]) -> list[str]:
+    claims = [c for c in article.get("claims", []) if isinstance(c, str) and c.strip()]
+    if not claims:
+        outline = article.get("outline", [])
+        claims.extend([o for o in outline if isinstance(o, str) and o.strip()])
+    if not claims:
+        gs = article.get("generated_sections", {})
+        for k in ("lede", "body", "counterpoints", "conclusion"):
+            txt = gs.get(k, "")
+            if isinstance(txt, str) and txt.strip():
+                claims.extend([s.strip() for s in txt.split(". ") if len(s.strip()) > 40][:3])
+    return claims[:8]
+
+
+def _score_signal(text: str, kind: str) -> float:
+    if not text:
+        return 0.0
+    t = text.lower()
+    if kind == "coherence":
+        dots = t.count("...") + t.count("??")
+        return max(0.0, 1.0 - min(1.0, dots / 3.0))
+    if kind == "evidence":
+        digits = sum(ch.isdigit() for ch in t)
+        refs = t.count("http") + t.count("doi") + t.count("source:")
+        return min(1.0, (digits * 0.02) + (refs * 0.25))
+    if kind == "novelty":
+        toks = [w.strip(".,:;!?'\"()[]") for w in t.split()]
+        uniq = len(set(toks))
+        return min(1.0, uniq / max(8, len(toks)))
+    if kind == "clarity":
+        sents = [s for s in t.replace("?", ".").replace("!", ".").split(".") if s.strip()]
+        if not sents:
+            return 0.5
+        lengths = [len(s.split()) for s in sents]
+        avg = sum(lengths) / len(lengths)
+        if 12 <= avg <= 22:
+            return 1.0
+        return max(0.0, 1.0 - (abs(avg - 17) / 25.0))
+    if kind == "sentiment":
+        pos = sum(w in t for w in ["excellent", "good", "clear", "strong", "improve", "win"])
+        neg = sum(w in t for w in ["bad", "poor", "unclear", "weak", "worse", "lose"])
+        total = pos + neg
+        if total == 0:
+            return 0.6
+        return max(0.0, min(1.0, (pos - neg) / total * 0.5 + 0.5))
+    return 0.5
+
+
+def compute_intention_scores(article: dict[str, Any], equation: dict[str, Any]) -> dict[str, Any]:
+    text_blob = " ".join(extract_claims_for_scoring(article))[:8000]
+    weights = equation.get("weights", {})
+    signals = {k: _score_signal(text_blob, k) for k in ("coherence", "evidence", "novelty", "clarity", "sentiment")}
+    overall = 0.0
+    total_w = 0.0
+    for k, w in weights.items():
+        overall += signals.get(k, 0.0) * float(w)
+        total_w += float(w)
+    ripple_score = overall / total_w if total_w > 0 else 0.0
+    return {"signals": signals, "ripple_score": ripple_score}
+
+
 # ---------- sidebar ----------
 st.sidebar.header("RippleWriter Studio")
 openai_key = st.sidebar.text_input("OpenAI API key (optional)", type="password")
@@ -244,9 +373,10 @@ if st.sidebar.button("Open output folder"):
     st.sidebar.write(str(OUTPUT_DIR))
 
 # ---------- main UI ----------
-st.title("📝 RippleWriter Studio")
 
-tab_compose, tab_source = st.tabs(["Compose (YAML)", "Source → Draft"])
+tab_compose, tab_source, tab_meta = st.tabs(
+    ["Compose (YAML)", "Source → Draft", "Meta-Analysis"]
+)
 
 # Tab 1: Compose (YAML)
 # -------------------------
@@ -392,10 +522,12 @@ with tab_compose:
 
                     sections = llm.write_post_sections(to_send)
                     data["generated_sections"] = sections
+           
                     if choice != "(new)":
                         save_yaml(ARTICLES_DIR / choice, data)
                     st.success("Sections generated and saved into YAML (generated_sections).")
                     st.json(sections)
+
                 except Exception as e:
                     st.error(f"LLM error: {e}")
 
@@ -425,10 +557,22 @@ with tab_compose:
                 st.markdown(f"[Open site index (local file)]({idx.as_uri()})")
         st.write("After rendering, find your pages in `/output`. The GitHub Pages site will update after you push.")
 
-        st.markdown("---")
-        st.subheader("Commit & Push")
-        st.caption("This stages everything (including /output), commits, and pushes to origin.")
-        if st.button("🚀 Commit & Push"):
+        # --- Live YAML preview & download ---
+st.markdown("---")
+st.subheader("YAML Preview")
+
+if choice != "(new)":
+    preview_yaml_box(
+        data,
+        filename=choice if choice.endswith((".yml", ".yaml")) else f"{choice}.yaml",
+    )
+else:
+    preview_yaml_box(default_article(), filename="new-article.yaml")
+
+    st.markdown("---")
+    st.subheader("Commit & Push")
+    st.caption("This stages everything (including /output), commits, and pushes to origin.")
+    if st.button("🚀 Commit & Push"):
             try:
                 msg = commit_msg or "Publish via RippleWriter Studio"
                 result = commit_and_push(ROOT, msg, branch=branch)
@@ -471,6 +615,70 @@ with tab_source:
         # 🔽 Single, unified image ingest UI (paste + drag/drop)
         ui_image_ingest()
 
+# -------------------------
+# Tab 3: Meta-Analysis (intention scoring)
+# -------------------------
+with tab_meta:
+    st.subheader("Meta-Analysis (Ripple score)")
+    colA, colB = st.columns([2, 1])
+
+    # --- Left: selections & results
+    with colA:
+        # Select a YAML draft
+        files = list_yaml_files()
+        names = [f.name for f in files]
+        draft_choice = st.selectbox("Select draft", names if names else ["(no drafts found)"])
+        if not names:
+            st.info("No YAML drafts found in /articles. Create one in the Compose tab.")
+            st.stop()
+
+        current_path = ARTICLES_DIR / draft_choice
+        article = load_yaml(current_path)
+
+        # Select an Intention Equation (loaded from config/equations.yaml)
+        equations = load_equations()
+        eq_names = [f"{e['name']} — {e.get('desc','')}" if e.get('desc') else e['name'] for e in equations]
+        eq_idx = st.selectbox("Intention Equation", range(len(equations)), format_func=lambda i: eq_names[i])
+        selected_eq = equations[eq_idx]
+
+        # Run analysis
+        run = st.button("Calculate Ripple score")
+        if run:
+            with st.spinner("Computing signals and Ripple score…"):
+                res = compute_intention_scores(article, selected_eq)
+
+            st.success("Analysis complete.")
+            st.metric("Ripple score", f"{res['ripple_score']:.3f}")
+
+            with st.expander("View signals"):
+                for k, v in res["signals"].items():
+                    st.progress(min(max(v, 0.0), 1.0), text=f"{k}: {v:.3f}")
+
+            # Option to save back into the YAML
+            if st.checkbox("Save results into this draft (analysis section)"):
+                # write an analysis section without clobbering other fields
+                article.setdefault("analysis", {})
+                article["analysis"]["equation_id"] = selected_eq.get("id", "none")
+                article["analysis"]["equation_name"] = selected_eq.get("name", "None")
+                article["analysis"]["ripple_score"] = float(res["ripple_score"])
+                article["analysis"]["signals"] = {k: float(v) for k, v in res["signals"].items()}
+                article["analysis"]["timestamp"] = date.today().isoformat()
+
+                save_yaml(current_path, article)
+                st.success(f"Saved analysis into {draft_choice}")
+
+    # --- Right: help / context
+    with colB:
+        st.caption("How this works")
+        st.write(
+            "Pick a draft and an Intention Equation. We extract claims/outlines or generated sections, "
+            "compute normalized signals (coherence, evidence, novelty, clarity, sentiment), and combine them "
+            "with your equation’s weights to produce a single Ripple score."
+        )
+        st.divider()
+        st.caption("Equation source")
+        st.code(str(EQUATIONS_PATH))
+        st.caption("Tip: You can version & share equations via git.")
 
  
  
