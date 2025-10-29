@@ -9,6 +9,8 @@ import streamlit as st
 from datetime import date
 from git import Repo, GitCommandError
 from streamlit_paste_button import paste_image_button
+import streamlit.components.v1 as components
+
 
 # Ensure parent folder is on sys.path so we can import llm_client.py
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -64,6 +66,45 @@ def load_yaml(p: pathlib.Path) -> Dict[str, Any]:
 def save_yaml(p: pathlib.Path, data: Dict[str, Any]) -> None:
     p.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
+# ---------- equation loading helper ----------
+
+
+
+
+
+def load_equations_yaml(p: pathlib.Path) -> Dict[str, Any]:
+    """
+    Load equations YAML and ALWAYS return {"equations": {...}}.
+    Accepts:
+      - {"equations": {NAME: {weights: {...}}}}
+      - {NAME: {weights: {...}}}
+      - [{"name": NAME, "weights": {...}}, ...]
+    """
+    try:
+        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {"equations": {}}
+
+    # Already in canonical shape
+    if isinstance(raw, dict) and "equations" in raw and isinstance(raw["equations"], dict):
+        return {"equations": raw["equations"]}
+
+    # Dict of equations w/out the top-level "equations" key
+    if isinstance(raw, dict):
+        return {"equations": raw}
+
+    # List form → coerce into named dict
+    if isinstance(raw, list):
+        eqs: Dict[str, Any] = {}
+        for i, item in enumerate(raw):
+            if isinstance(item, dict):
+                name = item.get("name") or f"eq_{i+1}"
+                eqs[name] = item
+        return {"equations": eqs}
+
+    return {"equations": {}}
+
+
 def preview_yaml_box(data: Dict[str, Any], filename: str = "draft.yaml") -> None:
     """
     Show a YAML preview and a download button for the current in-memory draft.
@@ -87,6 +128,42 @@ def preview_yaml_box(data: Dict[str, Any], filename: str = "draft.yaml") -> None
         use_container_width=True,
     )
 
+
+
+# --- Equations helpers -------------------------------------------------
+
+def normalize_equations_obj(eq_all: Any) -> Dict[str, Dict[str, Any]]:
+    """
+    Accepts multiple YAML shapes and returns a dict:
+    { "EquationName": {"weights": {...}}, ... }
+    """
+    # Case A1: {"equations": {...}}   (already a dict)
+    if isinstance(eq_all, dict) and isinstance(eq_all.get("equations"), dict):
+        return eq_all["equations"]
+
+    # Case A2: {"equations": [...]}   (list; normalize it)
+    if isinstance(eq_all, dict) and isinstance(eq_all.get("equations"), list):
+        return normalize_equations_obj(eq_all["equations"])
+
+    # Case B: already a dict of equations
+    if isinstance(eq_all, dict):
+        return eq_all
+
+    # Case C: list forms → coerce to dict
+    out: Dict[str, Dict[str, Any]] = {}
+    if isinstance(eq_all, list):
+        for item in eq_all:
+            # [{id/name, weights}, ...]
+            if isinstance(item, dict) and ("id" in item or "name" in item):
+                key = str(item.get("id") or item.get("name"))
+                out[key] = {"weights": item.get("weights", {})}
+            # [{"EqName": {...}}]  OR [{"EqName": {"weights": {...}}}]
+            elif isinstance(item, dict):
+                for k, v in item.items():
+                    if isinstance(v, dict):
+                        out[str(k)] = v
+    return out
+
 def render_selected(paths: List[str], env_vars: Dict[str, str]) -> subprocess.CompletedProcess:
     # render.py already accepts file globs; we pass paths (or nothing to render all)
     cmd = [sys.executable, str(ROOT / "render.py")]
@@ -94,6 +171,62 @@ def render_selected(paths: List[str], env_vars: Dict[str, str]) -> subprocess.Co
     env = os.environ.copy()
     env.update(env_vars or {})
     return subprocess.run(cmd, cwd=str(ROOT), env=env, capture_output=True, text=True)
+
+
+# --- Output helpers ---------------------------------------------------------
+def _guess_slug_from_yaml(data: Dict[str, Any]) -> str:
+    # prefer explicit slug, else derive from title
+    s = (data or {}).get("slug")
+    if s:
+        return "".join(c.lower() if c.isalnum() else "-" for c in s).strip("-")
+    title = (data or {}).get("title", "") or "untitled"
+    return "".join(c.lower() if c.isalnum() else "-" for c in title).strip("-")
+
+def find_post_outputs(slug: str) -> tuple[pathlib.Path | None, pathlib.Path | None]:
+    """Return (html_path, md_path) if present in /output/posts"""
+    posts = OUTPUT_DIR / "posts"
+    if not posts.exists():
+        return None, None
+    html = posts / f"{slug}.html"
+    md   = posts / f"{slug}.md"
+    return (html if html.exists() else None, md if md.exists() else None)
+
+def write_render_refresh(choice: str | None,
+                         data: Dict[str, Any],
+                         openai_key: str | None,
+                         mock_mode: bool) -> subprocess.CompletedProcess:
+    """
+    1) Generate sections with LLM based on current YAML (incl. intention_equation if present)
+    2) Save YAML
+    3) Render selected draft (or all if none)
+    4) Return the render process so caller can show logs
+    """
+    llm = LLMClient()
+    if mock_mode:
+        os.environ["RIPPLEWRITER_MOCK"] = "1"
+    elif openai_key:
+        os.environ["OPENAI_API_KEY"] = openai_key
+
+    to_send = default_article()
+    for k in ("title", "thesis", "audience", "tone", "outline", "claims",
+              "intention_equation", "format"):
+        if k in data:
+            to_send[k] = data[k]
+
+    sections = llm.write_post_sections(to_send)
+    data["generated_sections"] = sections
+
+    if choice and choice != "(new)":
+        save_yaml(ARTICLES_DIR / choice, data)
+
+    env_vars = {}
+    if openai_key:
+        env_vars["OPENAI_API_KEY"] = openai_key
+    if mock_mode:
+        env_vars["RIPPLEWRITER_MOCK"] = "1"
+
+    paths_arg = [str(ARTICLES_DIR / choice)] if (choice and choice != "(new)") else []
+    return render_selected(paths_arg, env_vars)
 
 def commit_and_push(repo_path: pathlib.Path, message: str, branch: str = "main") -> str:
     repo = Repo(str(repo_path))
@@ -114,6 +247,144 @@ def commit_and_push(repo_path: pathlib.Path, message: str, branch: str = "main")
         return f"Pushed to origin/{branch} successfully."
     except GitCommandError as e:
         return f"Push failed: {e}"
+
+# ---------- path & preview helpers ----------
+
+def _slugify(text: str) -> str:
+    return "".join(c.lower() if c.isalnum() else "-" for c in (text or "")).strip("-") or "untitled"
+
+def _guess_slug_from_yaml(data: Dict[str, Any]) -> str:
+    # Prefer explicit slug; fallback to title-based slug
+    slug = (data or {}).get("slug")
+    if slug:
+        return _slugify(slug)
+    title = (data or {}).get("title", "untitled")
+    return _slugify(title)
+
+def find_post_outputs(slug: str):
+    """Return (html_path, md_path) for a given slug inside /output/posts/."""
+    posts_dir = OUTPUT_DIR / "posts"
+    html = posts_dir / f"{slug}.html"
+    md   = posts_dir / f"{slug}.md"
+    return (html if html.exists() else None, md if md.exists() else None)
+
+def expected_output_html(choice: str | None, data: Dict[str, Any]):
+    """
+    Best-guess path to the rendered HTML for the current draft.
+    If a specific post HTML exists, return that; otherwise fall back to index.html.
+    """
+    try:
+        slug = _guess_slug_from_yaml(data)
+        html, _md = find_post_outputs(slug)
+        if html:
+            return html
+    except Exception:
+        pass
+    # Fallback to site index so the preview still shows *something*
+    return OUTPUT_DIR / "index.html"
+
+# ---------- Ripple score: load equations, extract signals, score ----------
+
+def _safe_len(x) -> int:
+    try:
+        return len(x)
+    except Exception:
+        return 0
+
+def extract_sections(article: Dict[str, Any]) -> Dict[str, str]:
+    """Return a dict of key text buckets to analyze."""
+    txt = []
+    # Use generated sections if present; fallback to outline + thesis
+    gen = article.get("generated_sections", {})
+    for k in ("lede", "body", "counterpoints", "conclusion"):
+        v = gen.get(k, "")
+        if isinstance(v, list):  # some LLMs may return arrays
+            v = "\n".join(v)
+        txt.append(v or "")
+    thesis = article.get("thesis", "")
+    outline = "\n".join(article.get("outline", []))
+    return {
+        "thesis": thesis or "",
+        "outline": outline or "",
+        "content": "\n\n".join(txt).strip(),
+    }
+
+def _count_bullets(s: str) -> int:
+    # quick proxy for structure/clarity: leading hyphens/numbers
+    return sum(1 for line in s.splitlines() if line.strip().startswith(("-", "*", "•", "1.", "2.", "3.")))
+
+def _count_citations(s: str) -> int:
+    # quick proxy for evidence: markdown/linky bits
+    hints = ["http://", "https://", "[", "](", "doi:", "arxiv.org", "source", "citation", "references"]
+    return sum(s.lower().count(h) for h in hints)
+
+def _count_unique_terms(s: str) -> int:
+    import re
+    toks = [t.lower() for t in re.findall(r"[a-zA-Z]{4,}", s)]
+    return len(set(toks))
+
+def extract_signals(article: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Very light heuristics to get us started.
+    Replace with your proper analyzers later (LLM checks, classifiers, etc.).
+    """
+    sec = extract_sections(article)
+    content = sec["content"]
+    thesis = sec["thesis"]
+    outline = sec["outline"]
+
+    words = _safe_len(content.split())
+    coherence = min(1.0, (words / 800.0))  # longer → more developed (proxy)
+    evidence  = min(1.0, (_count_citations(content) / 6.0))
+    clarity   = min(1.0, (_count_bullets(outline) / 8.0))
+    novelty   = min(1.0, (_count_unique_terms(content) / 800.0))
+    # sentiment proxy: neutral-ish = good; we’ll keep 0.7 baseline for now
+    sentiment = 0.7
+
+    return {
+        "coherence": coherence,
+        "evidence": evidence,
+        "novelty": novelty,
+        "clarity": clarity,
+        "sentiment": sentiment,
+    }
+
+def apply_equation(signals: Dict[str, float], weights: Dict[str, float]) -> float:
+    # weighted sum over shared keys, then clamp to [0, 1]
+    num = 0.0
+    den = 0.0
+    for k, w in weights.items():
+        v = float(signals.get(k, 0.0))
+        num += w * v
+        den += abs(w)
+    if den == 0:
+        return 0.0
+    return max(0.0, min(1.0, num / den))
+
+def _guess_slug_from_yaml(article: Dict[str, Any]) -> str:
+    slug = (article.get("slug") or article.get("title", "")).strip()
+    if not slug:
+        return "untitled"
+    return "".join(c.lower() if c.isalnum() else "-" for c in slug).strip("-") or "untitled"
+
+
+def _recent_built_posts(n: int = 10) -> list[pathlib.Path]:
+    posts_dir = OUTPUT_DIR / "posts"
+    if not posts_dir.exists():
+        return []
+    posts = list(posts_dir.glob("*.html"))
+    return sorted(posts, key=lambda p: p.stat().st_mtime, reverse=True)[:n]
+
+def _guess_output_html_for_draft(data: Dict[str, Any], current_choice: str | None) -> pathlib.Path | None:
+    """Prefer /output/posts/<slug>.html if it exists; otherwise latest built page."""
+    slug = (data or {}).get("slug")
+    if slug:
+        p = OUTPUT_DIR / "posts" / f"{slug}.html"
+        if p.exists():
+            return p
+    # fallback to newest post
+    recent = _recent_built_posts(1)
+    return recent[0] if recent else None
 
 def default_article() -> Dict[str, Any]:
     return {
@@ -372,12 +643,12 @@ st.sidebar.caption("Repo: " + str(ROOT))
 if st.sidebar.button("Open output folder"):
     st.sidebar.write(str(OUTPUT_DIR))
 
+
 # ---------- main UI ----------
 
-tab_compose, tab_source, tab_meta = st.tabs(
-    ["Compose (YAML)", "Source → Draft", "Meta-Analysis"]
-)
+tab_compose, tab_source, tab_meta = st.tabs(["Compose (YAML)", "Source → Draft", "Meta-Analysis"])
 
+# -------------------------
 # Tab 1: Compose (YAML)
 # -------------------------
 with tab_compose:
@@ -413,7 +684,7 @@ with tab_compose:
         if choice == "(new)":
             new_name = st.text_input("New file name", value="new-article.yaml")
 
-            # NEW: format & intention equation for new drafts
+            # Format & intention equation for new drafts
             new_format = st.selectbox(
                 "Format",
                 format_options,
@@ -446,6 +717,12 @@ with tab_compose:
             current_path = ARTICLES_DIR / choice
             data = load_yaml(current_path)
 
+            # Show Ripple score if previously saved by Meta-Analysis
+            meta = data.get("meta") or {}
+            score = meta.get("ripple_score") if isinstance(meta, dict) else None
+            if isinstance(score, (int, float)):
+                st.metric("Ripple score", f"{score:.3f}")
+
             # Existing draft fields
             st.text_input("Title", value=data.get("title", ""), key="title")
             st.text_input("Author", value=data.get("author", "RippleWriter AI"), key="author")
@@ -460,7 +737,7 @@ with tab_compose:
                 key="outline_text"
             )
 
-            # NEW: format & intention equation for existing drafts
+            # Format & intention equation for existing drafts
             cur_format = data.get("format", format_options[0])
             cur_equation = data.get("intention_equation", intention_options[0])
             data["format"] = st.selectbox(
@@ -522,7 +799,6 @@ with tab_compose:
 
                     sections = llm.write_post_sections(to_send)
                     data["generated_sections"] = sections
-           
                     if choice != "(new)":
                         save_yaml(ARTICLES_DIR / choice, data)
                     st.success("Sections generated and saved into YAML (generated_sections).")
@@ -557,29 +833,104 @@ with tab_compose:
                 st.markdown(f"[Open site index (local file)]({idx.as_uri()})")
         st.write("After rendering, find your pages in `/output`. The GitHub Pages site will update after you push.")
 
-        # --- Live YAML preview & download ---
-st.markdown("---")
-st.subheader("YAML Preview")
+    # --- One-click: YAML → LLM → Render → Preview refresh ---
+    st.markdown("### ✨ Write & Render with Intention")
+    if st.button("⚡ Write & Render Now", key="rw_write_render", disabled=(choice == "(new)")):
+        try:
+            proc = write_render_refresh(choice if 'choice' in locals() else None, data, openai_key, mock_mode)
+            if proc.returncode == 0:
+                st.success("Draft written and rendered successfully.")
 
-if choice != "(new)":
-    preview_yaml_box(
-        data,
-        filename=choice if choice.endswith((".yml", ".yaml")) else f"{choice}.yaml",
-    )
-else:
-    preview_yaml_box(default_article(), filename="new-article.yaml")
+                # Clickable links to outputs
+                slug = _guess_slug_from_yaml(data)
+                out_html, out_md = find_post_outputs(slug)
+                lines = [":white_check_mark: **Rendered successfully** to `/output`."]
+                if out_html:
+                    lines.append(f"- View HTML: [{slug}.html]({out_html.as_uri()})")
+                if out_md:
+                    lines.append(f"- View Markdown: [{slug}.md]({out_md.as_uri()})")
+                st.success("\n".join(lines))
+            else:
+                st.error("Render failed.")
+
+            with st.expander("Write/Render logs"):
+                st.code(proc.stdout + "\n" + proc.stderr)
+
+            st.rerun()
+        except Exception as e:
+            st.error(f"Write & Render failed: {e}")
+
+    # --- Live in-app article preview & quick render ---
+    st.markdown("### Live article preview")
+    html_path = expected_output_html(choice if 'choice' in locals() else None, data)
+
+    if st.button("🔁 Quick render & refresh preview", key="rw_quick_render"):
+        env_vars = {}
+        if openai_key:
+            env_vars["OPENAI_API_KEY"] = openai_key
+        if mock_mode:
+            env_vars["RIPPLEWRITER_MOCK"] = "1"
+        paths_arg = [str(ARTICLES_DIR / choice)] if (choice and choice != "(new)") else []
+        proc = render_selected(paths_arg, env_vars)
+        if proc.returncode == 0:
+            st.success("Rendered successfully.")
+        else:
+            st.error("Render failed.")
+        with st.expander("Render logs"):
+            st.code(proc.stdout + "\n" + proc.stderr)
+
+    if html_path.exists():
+        try:
+            html_content = html_path.read_text(encoding="utf-8")
+            components.html(html_content, height=900, scrolling=True)
+            st.caption(f"Previewing: {html_path}")
+        except Exception as e:
+            st.warning(f"Could not embed preview ({e}). You can still open the output index above.")
+    else:
+        st.info(
+            "No article HTML found yet for this draft. "
+            "Use **Write & Render Now** or **Quick Render & Refresh Preview** above."
+        )
+
+    # --- Version Info Footer ---
+    import subprocess
+    try:
+        version = subprocess.check_output(
+            ["git", "describe", "--tags", "--always"], text=True
+        ).strip()
+        repo_url = "https://github.com/kevinmday/RippleWriter"
+        st.markdown(
+            f"**Current build:** [{version}]({repo_url}/tree/{version})",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        st.caption("**Current build:** (version unavailable)")
+
+    # --- Live YAML preview & download ---
+    st.markdown("---")
+    st.subheader("YAML Preview")
+    if choice != "(new)":
+        preview_yaml_box(
+            data,
+            filename=choice if choice.endswith((".yml", ".yaml")) else f"{choice}.yaml",
+        )
+    else:
+        preview_yaml_box(default_article(), filename="new-article.yaml")
 
     st.markdown("---")
     st.subheader("Commit & Push")
     st.caption("This stages everything (including /output), commits, and pushes to origin.")
     if st.button("🚀 Commit & Push"):
-            try:
-                msg = commit_msg or "Publish via RippleWriter Studio"
-                result = commit_and_push(ROOT, msg, branch=branch)
-                st.success(result)
-            except Exception as e:
-                st.error(f"Git push failed: {e}")
-                st.info("If this is the first push on this machine, make sure you’re signed in to Git and have permission to push (Git Credential Manager will usually prompt on Windows).")
+        try:
+            msg = commit_msg or "Publish via RippleWriter Studio"
+            result = commit_and_push(ROOT, msg, branch=branch)
+            st.success(result)
+        except Exception as e:
+            st.error(f"Git push failed: {e}")
+            st.info(
+                "If this is the first push on this machine, make sure you’re signed in to Git "
+                "and have permission to push (Git Credential Manager will usually prompt on Windows)."
+            )
 
 # -------------------------
 # Tab 2: Source → Draft
@@ -612,73 +963,93 @@ with tab_source:
                     pass
         combined_text = "\n\n".join([t for t in [paste_text] + file_texts if t])
 
-        # 🔽 Single, unified image ingest UI (paste + drag/drop)
+        # Unified image ingest UI (paste + drag/drop)
         ui_image_ingest()
 
 # -------------------------
-# Tab 3: Meta-Analysis (intention scoring)
+# Tab 3: Meta-Analysis
 # -------------------------
 with tab_meta:
     st.subheader("Meta-Analysis (Ripple score)")
-    colA, colB = st.columns([2, 1])
 
-    # --- Left: selections & results
-    with colA:
-        # Select a YAML draft
-        files = list_yaml_files()
-        names = [f.name for f in files]
-        draft_choice = st.selectbox("Select draft", names if names else ["(no drafts found)"])
-        if not names:
-            st.info("No YAML drafts found in /articles. Create one in the Compose tab.")
-            st.stop()
+    # Draft picker
+    files = list_yaml_files()
+    names = [f.name for f in files]
+    if not names:
+        st.info("No drafts found. Create/save a draft in the Compose tab first.")
+        st.stop()
 
-        current_path = ARTICLES_DIR / draft_choice
-        article = load_yaml(current_path)
+    draft_choice = st.selectbox("Select draft", names, index=0, key="meta_draft")
 
-        # Select an Intention Equation (loaded from config/equations.yaml)
-        equations = load_equations()
-        eq_names = [f"{e['name']} — {e.get('desc','')}" if e.get('desc') else e['name'] for e in equations]
-        eq_idx = st.selectbox("Intention Equation", range(len(equations)), format_func=lambda i: eq_names[i])
-        selected_eq = equations[eq_idx]
+    # Load & normalize equations
+    eq_path = ROOT / "config" / "equations.yaml"
+    eq_dict = load_equations_yaml(eq_path)          # <-- always a dict now
+    eq_names = sorted(eq_dict.keys())               # list[str] for the dropdown
 
-        # Run analysis
-        run = st.button("Calculate Ripple score")
-        if run:
-            with st.spinner("Computing signals and Ripple score…"):
-                res = compute_intention_scores(article, selected_eq)
+    eq_choice = st.selectbox(
+        "Intention Equation",
+        ["None — Skip intention math."] + eq_names,
+        index=0,
+        key="meta_eq"
+    )
 
-            st.success("Analysis complete.")
-            st.metric("Ripple score", f"{res['ripple_score']:.3f}")
+    current_path = ARTICLES_DIR / draft_choice
+    article = load_yaml(current_path)
 
-            with st.expander("View signals"):
-                for k, v in res["signals"].items():
-                    st.progress(min(max(v, 0.0), 1.0), text=f"{k}: {v:.3f}")
+    colL, colR = st.columns([2, 1])
+    with colL:
+        if st.button("Calculate Ripple score", key="meta_calc"):
+            # Extract signals (your existing helper)
+            sig = extract_signals(article)
 
-            # Option to save back into the YAML
-            if st.checkbox("Save results into this draft (analysis section)"):
-                # write an analysis section without clobbering other fields
-                article.setdefault("analysis", {})
-                article["analysis"]["equation_id"] = selected_eq.get("id", "none")
-                article["analysis"]["equation_name"] = selected_eq.get("name", "None")
-                article["analysis"]["ripple_score"] = float(res["ripple_score"])
-                article["analysis"]["signals"] = {k: float(v) for k, v in res["signals"].items()}
-                article["analysis"]["timestamp"] = date.today().isoformat()
+            # Choose weights
+            if eq_choice == "None — Skip intention math.":
+                weights = {k: 1.0 for k in sig.keys()}  # equal weights
+            else:
+                weights = eq_dict.get(eq_choice, {}).get("weights", {}) or {}
 
-                save_yaml(current_path, article)
-                st.success(f"Saved analysis into {draft_choice}")
+            score = apply_equation(sig, weights)
 
-    # --- Right: help / context
-    with colB:
+            # Persist to YAML
+            article.setdefault("meta", {})
+            article["meta"]["ripple_score"] = round(float(score), 4)
+            article["meta"]["signals"] = {k: round(float(v), 4) for k, v in sig.items()}
+            article["meta"]["equation"] = eq_choice if eq_choice != "None — Skip intention math." else "none"
+
+            save_yaml(current_path, article)
+            st.success(f"Ripple score saved to YAML → meta.ripple_score = **{score:.3f}**")
+
+            st.session_state["__last_meta_result__"] = {"score": score, "signals": sig, "weights": weights}
+
+        # Show last run (if any)
+        res = st.session_state.get("__last_meta_result__")
+        if res:
+            score = float(res["score"]); sig = res["signals"]; weights = res["weights"]
+
+            st.markdown(f"### Score: **{score:.3f}**")
+            st.progress(min(1.0, max(0.0, score)))
+
+            st.markdown("#### Signal breakdown")
+            for k in ["coherence", "evidence", "novelty", "clarity", "sentiment"]:
+                v = float(sig.get(k, 0.0))
+                st.write(f"{k.capitalize()}: {v:.3f}")
+                st.progress(min(1.0, max(0.0, v)))
+
+            st.markdown("#### Table")
+            st.table(
+                {
+                    "signal": list(sig.keys()),
+                    "value": [round(float(sig[k]), 3) for k in sig.keys()],
+                    "weight": [weights.get(k, 1.0) if weights else 1.0 for k in sig.keys()],
+                }
+            )
+
+    with colR:
         st.caption("How this works")
         st.write(
-            "Pick a draft and an Intention Equation. We extract claims/outlines or generated sections, "
-            "compute normalized signals (coherence, evidence, novelty, clarity, sentiment), and combine them "
-            "with your equation’s weights to produce a single Ripple score."
+            "We extract sections and compute normalized signals "
+            "(coherence, evidence, novelty, clarity, sentiment), then apply your "
+            "equation’s weights to produce a Ripple score."
         )
-        st.divider()
         st.caption("Equation source")
-        st.code(str(EQUATIONS_PATH))
-        st.caption("Tip: You can version & share equations via git.")
-
- 
- 
+        st.code(str(eq_path))
