@@ -17,3 +17,11 @@ publish:
   category: oped
   tags:
   - ripplewriter
+format: Op-Ed
+intention_equation: Narrative Arc (Setup → Conflict → Resolution)
+generated_sections:
+  lede: Op-eds can be both opinionated and honest when they show their work.
+  body: "This piece argues for intention transparency via YAML → LLM → publish.\n\
+    \        It lays out limits and cites a few sources by name."
+  counterpoints: LLMs hallucinate; editorial review remains essential.
+  conclusion: Let's publish with receipts and iteration hooks.

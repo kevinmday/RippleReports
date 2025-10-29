@@ -1,31 +1,35 @@
-﻿# === Metadata ===
-title: "RippleWriter Launch"
-author: "RippleWriter AI"
-date: "2025-10-20"
+title: RippleWriter Launch
+author: RippleWriter AI
+date: '2025-10-20'
 slug: ripplewriter-launch
+thesis: 'We can publish opinion pieces faster by drafting from YAML and auto-rendering
+  to GitHub Pages.
 
-# === Positioning ===
-thesis: >
-  We can publish opinion pieces faster by drafting from YAML and auto-rendering to GitHub Pages.
-audience: "general readers"
-tone: "plain-spoken, evidence-aware, forward-leaning"
-
-# === Outline ===
+  '
+audience: general readers
+tone: plain-spoken, evidence-aware, forward-leaning
 outline:
-  - "Lede: hook, why now"
-  - "Problem framing"
-  - "Approach / argument"
-  - "Counterpoints & limits"
-  - "Call-to-action / close"
-
-# === Claims (optional) ===
+- 'Lede: hook, why now'
+- Problem framing
+- Approach / argument
+- Counterpoints & limits
+- Call-to-action / close
 claims:
-  - claim: "Structured prompts reduce hallucination risk."
-    evidence: ["Example source one", "Example source two"]
-
+- claim: Structured prompts reduce hallucination risk.
+  evidence:
+  - Example source one
+  - Example source two
 images: []
-
 publish:
   draft: false
-  category: "oped"
-  tags: [ripplewriter]
+  category: oped
+  tags:
+  - ripplewriter
+format: Op-Ed
+intention_equation: None
+generated_sections:
+  lede: Op-eds can be both opinionated and honest when they show their work.
+  body: "This piece argues for intention transparency via YAML → LLM → publish.\n\
+    \        It lays out limits and cites a few sources by name."
+  counterpoints: LLMs hallucinate; editorial review remains essential.
+  conclusion: Let's publish with receipts and iteration hooks.
