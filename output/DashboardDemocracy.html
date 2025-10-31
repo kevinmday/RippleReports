@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard Democracy</title>
+<style>
+  :root{
+    --bg:#0b0f14;         /* deep slate */
+    --panel:#121822;      /* card bg */
+    --ink:#e8eef6;        /* primary text */
+    --muted:#9fb0c3;      /* secondary text */
+    --rule:#1f2a3a;       /* borders */
+    --accent:#66b3ff;     /* links / highlights */
+    --good:#2ecc71;       /* positive */
+    --warn:#f1c40f;       /* warning */
+    --bad:#e74c3c;        /* negative */
+    --chalkboard:#17331d; /* chalkboard */
+    --chalk:#f5f5f5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px}
+  header{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  header .brand{display:flex;gap:12px;align-items:center}
+  .brand .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#2f6bff, #22d3ee);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .brand .logo span{font-weight:900;color:white}
+  .brand h1{font-size:1.35rem;margin:0}
+  .brand .sub{font-size:.9rem;color:var(--muted)}
+  header .controls{display:flex;gap:10px;align-items:center}
+  select,button,input,textarea{background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:10px;padding:10px 12px}
+  button{cursor:pointer}
+  button.primary{background:linear-gradient(135deg,#3b82f6,#06b6d4);border:0}
+  main{display:grid;grid-template-columns:1.35fr .65fr;gap:18px}
+  @media (max-width: 980px){main{grid-template-columns:1fr;}}
+  .grid{display:grid;gap:18px}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  @media (max-width: 980px){.grid.cols-3,.grid.cols-2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+  .card h3{margin:0 0 8px 0;font-size:1.05rem}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media (max-width: 980px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0));border:1px solid var(--rule);border-radius:14px;padding:12px}
+  .kpi .label{font-size:.78rem;color:var(--muted)}
+  .kpi .value{font-size:1.6rem;font-weight:700;margin-top:4px}
+  .kpi canvas{width:100%;height:40px}
+  .state{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px solid var(--rule);background:rgba(255,255,255,.02)}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.good{background:var(--good)}
+  .dot.warn{background:var(--warn)}
+  .dot.bad{background:var(--bad)}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--rule);padding:10px;text-align:left}
+  th{color:var(--muted);font-weight:600}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--rule);font-size:.8rem;color:var(--muted)}
+  .actions li{margin:8px 0}
+  .chalkboard{background:var(--chalkboard);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+  .chalk{color:var(--chalk);font-family:"Courier New",monospace;white-space:pre-wrap;text-shadow:0 0 1px rgba(255,255,255,.6),0 0 2px rgba(255,255,255,.3)}
+  .footnote{color:var(--muted);font-size:.85rem}
+  .textarea small{display:block;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><span>Δ</span></div>
+      <div>
+        <h1>Dashboard Democracy</h1>
+        <div class="sub">Quantifying public intention and turning it into actionable leverage.</div>
+      </div>
+    </div>
+    <div class="controls">
+      <select id="issueSelect" title="Issue selector">
+        <option value="tesla">Tesla / CEO Partisanship</option>
+        <option value="deipolicy">Corporate DEI Retrenchment</option>
+        <option value="media">Media Programming / Accountability</option>
+      </select>
+      <select id="windowSelect" title="Time window">
+        <option value="24h">Last 24h</option>
+        <option value="7d" selected>Last 7d</option>
+        <option value="30d">Last 30d</option>
+      </select>
+      <button class="primary" id="simulateBtn">Simulate Update</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT COLUMN -->
+    <section class="grid">
+      <div class="card">
+        <h3>Field Health</h3>
+        <div class="kpis" id="kpis">
+          <div class="kpi"><div class="label">RippleTruth (T)</div><div class="value" id="tVal">0.82</div><canvas id="sparkT"></canvas></div>
+          <div class="kpi"><div class="label">FILS (Manifestation)</div><div class="value" id="filsVal">0.77</div><canvas id="sparkF"></canvas></div>
+          <div class="kpi"><div class="label">TTCF (Chaos)</div><div class="value" id="ttcfVal">0.21</div><canvas id="sparkC"></canvas></div>
+          <div class="kpi"><div class="label">UCIP (Propagation)</div><div class="value" id="ucipVal">0.64</div><canvas id="sparkU"></canvas></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+          <div class="state"><span class="dot good"></span><span id="stateLabel">Aligned</span></div>
+          <div class="footnote">WIS<sub>democracy</sub> = FILS × (1 − TTCF) × UCIP × CivicWeight</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Recommended Actions (Ω*)</h3>
+        <ol class="actions" id="actions">
+          <li><strong>Transparency Briefing:</strong> Publish values-policy memo reconciling product stance with consumer base.</li>
+          <li><strong>Stakeholder Call:</strong> 48-hour listening sessions with top customer segments most at risk.</li>
+          <li><strong>Course Correction:</strong> Narrow, verifiable commitments with dates and owners.</li>
+        </ol>
+        <div class="footnote">Ranked by expected impact-per-effort using WIS<sub>democracy</sub>.</div>
+      </div>
+
+      <div class="card">
+        <h3>Live Intention Stream</h3>
+        <table id="feed">
+          <thead><tr><th>Time</th><th>Source</th><th>Intent</th><th>Cred</th><th>Effect</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN -->
+    <aside class="grid">
+      <div class="card">
+        <h3>Early Warning: Cost/Benefit Gauge</h3>
+        <canvas id="gauge" width="560" height="240" aria-label="Early Warning Gauge"></canvas>
+        <div class="footnote">When projected boycott cost > perceived partisan benefit, gauge enters the red. Trigger preventive actions.</div>
+      </div>
+
+      <div class="card">
+        <h3>Chalkboard: Intention → Decision</h3>
+        <div class="chalkboard">
+<pre class="chalk">If  (RippleTruth × FILS × UCIP) < θ  and  TTCF ↑
+Then Issue:   Public Re‑alignment Notice
+      Do:     Pause escalatory comms; open stakeholder channel
+      Commit: Specific, measurable policy corrections
+
+ΔRisk ≈ ∂Cost_boycott/∂t − ∂Benefit_alignment/∂t
+
+Preventive equilibrium when  ΔRisk ≤ 0
+</pre>
+        </div>
+      </div>
+
+      <div class="card textarea">
+        <h3>Paste Live JSON (Webhook)</h3>
+        <textarea id="jsonInput" rows="10" placeholder='{"truth":0.84,"fils":0.79,"ttcf":0.18,"ucip":0.69,"civicWeight":0.92,
+  "actions":["CEO clarifies scope","Reinstate program"],
+  "feed":[{"t":"10:21","src":"RSS","intent":"boycott","cred":0.81,"effect":-0.03}]}'></textarea>
+        <small>Schema: truth, fils, ttcf, ucip, civicWeight ∈ [0,1]; actions[]; feed[{t,src,intent,cred,effect}]</small>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button id="applyJson" class="primary">Apply JSON</button>
+          <button id="resetJson">Reset</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="card" style="margin-top:18px">
+    <h3>Method Notes</h3>
+    <ul>
+      <li><strong>RippleTruth (T):</strong> penalizes low-credibility narratives; boosts human‑verified sourcing.</li>
+      <li><strong>FILS:</strong> probability that intention manifests as real‑world change within the selected window.</li>
+      <li><strong>TTCF:</strong> chaos/fragmentation; higher values reduce expected efficacy.</li>
+      <li><strong>UCIP:</strong> propagation strength across networks over time.</li>
+      <li><strong>WIS<sub>democracy</sub>:</strong> allocator that ranks action sets by expected impact.</li>
+    </ul>
+  </section>
+
+</div>
+
+<script>
+/* ---------- Utilities ---------- */
+const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function stateFromScores({truth,fils,ttcf,ucip}){
+  const score = 0.4*fils + 0.2*truth + 0.3*ucip + 0.1*(1-ttcf);
+  return score>0.7?{label:'Aligned', tone:'good'}: score>0.5?{label:'Mixed', tone:'warn'}:{label:'At Risk', tone:'bad'};
+}
+function computeWIS({fils,ttcf,ucip,civicWeight=0.9}){
+  return clamp(fils*(1-ttcf)*ucip*civicWeight);
+}
+
+/* ---------- Sparklines ---------- */
+function drawSpark(canvas, data){
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width=canvas.clientWidth*2, h=canvas.height=80; // Hi‑DPI
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle='#66b3ff'; ctx.lineWidth=2; ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x = (i/(data.length-1))*w;
+    const y = h - v*h*0.8 - h*0.1;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  });
+  ctx.stroke();
+}
+
+/* ---------- Gauge ---------- */
+function drawGauge(value){
+  const canvas=document.getElementById('gauge');
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  // arc background
+  const cx=w/2, cy=h*0.9, r=Math.min(w,h)*0.8/2;
+  function arc(from,to,color){
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=18;
+    ctx.arc(cx,cy,r,Math.PI-from,Math.PI-to,false); ctx.stroke();
+  }
+  arc(0.00,0.33,'#2ecc71'); // green
+  arc(0.34,0.66,'#f1c40f'); // yellow
+  arc(0.67,1.00,'#e74c3c'); // red
+  // needle
+  const t = clamp(value,0,1);
+  const ang = Math.PI - t*Math.PI; // left to right
+  const nx = cx + Math.cos(ang)*r;
+  const ny = cy + Math.sin(ang)*r;
+  ctx.strokeStyle='#e8eef6'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny); ctx.stroke();
+  // label
+  ctx.fillStyle='#9fb0c3'; ctx.font='14px system-ui';
+  ctx.fillText('Projected Boycott Cost vs Benefit', 14, 22);
+  ctx.fillStyle='#e8eef6'; ctx.font='bold 22px system-ui';
+  const label = t>0.67?'High Risk':t>0.33?'Watch':'Stable';
+  ctx.fillText(label+`  (${(t*100)|0}%)`, 14, 48);
+}
+
+/* ---------- Live Table ---------- */
+function addFeedRow({t,src,intent,cred,effect}){
+  const tb=document.querySelector('#feed tbody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${t}</td><td>${src}</td><td><span class="pill">${intent}</span></td><td>${cred.toFixed(2)}</td><td>${(effect>0?'+':'')+effect.toFixed(2)}</td>`;
+  tb.prepend(tr);
+  while(tb.rows.length>12) tb.deleteRow(-1);
+}
+
+/* ---------- State + KPI Update ---------- */
+function updateAll(state){
+  const {truth,fils,ttcf,ucip} = state;
+  document.getElementById('tVal').textContent=truth.toFixed(2);
+  document.getElementById('filsVal').textContent=fils.toFixed(2);
+  document.getElementById('ttcfVal').textContent=ttcf.toFixed(2);
+  document.getElementById('ucipVal').textContent=ucip.toFixed(2);
+  // draw sparklines
+  historyT.push(truth); historyF.push(fils); historyC.push(ttcf); historyU.push(ucip);
+  [historyT,historyF,historyC,historyU].forEach(arr=>{if(arr.length>50) arr.shift();});
+  drawSpark(document.getElementById('sparkT'), historyT);
+  drawSpark(document.getElementById('sparkF'), historyF);
+  drawSpark(document.getElementById('sparkC'), historyC.map(v=>1-v)); // flip chaos visually
+  drawSpark(document.getElementById('sparkU'), historyU);
+
+  // state pill
+  const s = stateFromScores(state);
+  const pill=document.querySelector('.state');
+  pill.querySelector('#stateLabel').textContent=s.label;
+  pill.querySelector('.dot').className = 'dot '+s.tone;
+
+  // actions
+  const wis=computeWIS(state);
+  const gVal=clamp(1-(wis*0.9)); // higher WIS -> lower risk
+  drawGauge(gVal);
+}
+
+/* ---------- Demo Data ---------- */
+let historyT=[0.72,0.74,0.75,0.77,0.76,0.78,0.80,0.79,0.81,0.82];
+let historyF=[0.63,0.65,0.66,0.69,0.70,0.72,0.73,0.74,0.75,0.77];
+let historyC=[0.28,0.27,0.27,0.25,0.24,0.23,0.22,0.22,0.21,0.21];
+let historyU=[0.50,0.52,0.55,0.57,0.58,0.60,0.61,0.62,0.63,0.64];
+
+const state={truth:0.82,fils:0.77,ttcf:0.21,ucip:0.64,civicWeight:0.90};
+const defaultActions=[
+  'Transparency briefing with dated deliverables',
+  'Restore alignment with core consumer values',
+  'Public metrics on compliance / progress'
+];
+const defaultFeed=[
+  {t:'09:58',src:'RSS',intent:'boycott',cred:0.78,effect:-0.02},
+  {t:'09:47',src:'Newswire',intent:'clarification',cred:0.86,effect:+0.01},
+  {t:'09:31',src:'Social (verified)',intent:'petition',cred:0.74,effect:+0.00}
+];
+
+function populateDefaults(){
+  defaultFeed.forEach(addFeedRow);
+  updateAll(state);
+}
+
+/* ---------- JSON Input ---------- */
+const jsonInput=document.getElementById('jsonInput');
+const applyBtn=document.getElementById('applyJson');
+const resetBtn=document.getElementById('resetJson');
+applyBtn.addEventListener('click',()=>{
+  try{
+    const o=JSON.parse(jsonInput.value);
+    const ns={
+      truth:clamp(o.truth??state.truth),
+      fils:clamp(o.fils??state.fils),
+      ttcf:clamp(o.ttcf??state.ttcf),
+      ucip:clamp(o.ucip??state.ucip),
+      civicWeight:clamp(o.civicWeight??state.civicWeight)
+    };
+    updateAll(ns);
+    if(Array.isArray(o.actions)){
+      const ul=document.getElementById('actions');
+      ul.innerHTML='';
+      o.actions.slice(0,5).forEach(a=>{
+        const li=document.createElement('li');
+        li.textContent=a; ul.append(li);
+      });
+    }
+    if(Array.isArray(o.feed)){
+      const tb=document.querySelector('#feed tbody');
+      tb.innerHTML='';
+      o.feed.forEach(addFeedRow);
+    }
+  }catch(e){
+    alert('Invalid JSON');
+  }
+});
+resetBtn.addEventListener('click',()=>{jsonInput.value=''; const tb=document.querySelector('#feed tbody'); tb.innerHTML=''; populateDefaults();});
+
+/* ---------- Simulate Updates ---------- */
+const simulate=document.getElementById('simulateBtn');
+simulate.addEventListener('click',()=>{
+  const drift=()=> (Math.random()-0.5)*0.06; // gentle bump
+  state.truth=clamp(state.truth+drift()*0.5);
+  state.fils=clamp(state.fils+drift());
+  state.ttcf=clamp(state.ttcf+drift()*-1); // inverse
+  state.ucip=clamp(state.ucip+drift()*0.6);
+  updateAll(state);
+  addFeedRow({t:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),src:'Sim',intent:'update',cred:state.truth,effect:(state.fils-0.5)/50});
+});
+
+/* ---------- Init ---------- */
+populateDefaults();
+</script>
+</body>
+</html>

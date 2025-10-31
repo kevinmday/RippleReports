@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Math of Rebalancing — NYT‑Style Op‑Ed</title>
+  <meta name="description" content="A Tech + Society op-ed by Kevin Day on intention fields, NYC's mayoral race, and AI torque — set in a New York Times–inspired layout." />
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111111;
+      --ink-soft:#555555;
+      --rule:#e6e6e6;
+      --accent:#0b3d91; /* deep editorial blue */
+      --accent-soft:#2a5bb7;
+      --pull:#f7f7f7;
+      --quote:#6b6b6b;
+      --max: 860px;
+    }
+    html,body{background:var(--bg);color:var(--ink);margin:0;padding:0;}
+    body{font-family: Georgia, "Times New Roman", Times, serif; line-height:1.65;}
+    .wrap{max-width:var(--max);margin:0 auto;padding:28px 20px 80px;}
+
+    /* Header */
+    header{border-bottom:1px solid var(--rule);padding-bottom:18px;margin-bottom:26px}
+    .kicker{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; letter-spacing:.08em; text-transform:uppercase; font-weight:600; color:var(--accent); font-size:12px;}
+    h1{font-size:44px; line-height:1.1; margin:6px 0 10px; font-weight:700;}
+    .sub{font-size:20px; color:var(--ink-soft); margin:6px 0 14px;}
+    .byline{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#333; font-size:14px;}
+    .meta{color:#777; font-size:13px; margin-top:6px}
+
+    /* Grid for body */
+    .grid{display:grid; grid-template-columns: 1fr; gap:24px;}
+    @media(min-width:900px){
+      .grid{grid-template-columns: 3fr 1.2fr; gap:40px}
+      aside{position:sticky; top:24px; align-self:start}
+    }
+
+    /* Body typography */
+    p{margin:0 0 18px}
+    h2{font-size:24px; margin:30px 0 10px; line-height:1.25}
+    .rule{border-top:1px solid var(--rule); margin:28px 0}
+
+    /* Pull quotes */
+    .pull{background:var(--pull); border-left:4px solid var(--accent-soft); padding:16px 16px 16px 18px; margin:22px 0;}
+    .pull p{font-size:20px; color:var(--quote); font-style:italic; margin:0}
+
+    /* Equation callouts */
+    .eq{border:1px solid var(--rule); background:#fff; padding:14px 16px; border-radius:8px; margin:18px 0;}
+    .eq .label{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:#666; font-weight:600}
+    .eq .math{font-family: 'Times New Roman', Times, serif; font-size:18px; margin-top:6px}
+    .eq .desc{color:#666; font-size:14px; margin-top:6px}
+
+    /* Sidebar */
+    aside .box{border:1px solid var(--rule); border-radius:10px; padding:14px 16px; margin-bottom:16px}
+    aside .box h3{font-size:14px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; text-transform:uppercase; letter-spacing:.06em; color:#333; margin:0 0 10px}
+    aside .box p{font-size:14px; color:#444}
+
+    /* Footer note */
+    .footnote{color:#666; font-size:14px; border-top:1px solid var(--rule); padding-top:14px; margin-top:34px}
+    .sig{font-style:italic; color:#444}
+
+    /* Tiny details */
+    .dot{color:#b8b8b8; padding:0 6px}
+    .tag{display:inline-block; font: 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; letter-spacing:.05em; text-transform:uppercase; color:#666}
+    a{color:var(--accent-soft); text-decoration:none}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">Opinion | Tech + Society</div>
+      <h1>The Math of Rebalancing</h1>
+      <div class="sub">How New York’s mayoral race reveals America’s field repair.</div>
+      <div class="byline">By Kevin Day</div>
+      <div class="meta">Retired U.S. Navy Radar Chief<span class="dot">•</span> Author of <em>Intention Theory</em></div>
+    </header>
+
+    <div class="grid">
+      <main>
+        <div class="pull"><p>When systems overheat, physics demands a return to balance. Democracies are no different.</p></div>
+
+        <h2>I. The Static on America’s Radar</h2>
+        <p>In radar work, one degree of misalignment can fill the screen with lies. That’s what happened to America. Our civic array tilted, our returns blurred. Politics became an echo chamber of noise.</p>
+        <p>Donald Trump didn’t invent the chaos, but he amplified it. The nation’s <em>Intention Field</em>—the invisible geometry that keeps a society coherent—shifted out of phase.</p>
+
+        <div class="eq">
+          <div class="label">Equation 1 — The Coherence Differential</div>
+          <div class="math">d(UCIP)/dt = α·K(s) − β·TTCF</div>
+          <div class="desc"><strong>UCIP:</strong> Unified Coherence of Intention Pattern. <strong>TTCF:</strong> Trump Tensor Chaos Factor.</div>
+        </div>
+
+        <p>When TTCF rises, the field jitters. When UCIP strengthens, signal overtakes noise.</p>
+
+        <h2>II. The New York Node</h2>
+        <p>Enter <strong>Zohran Mamdani</strong>, son of immigrants, mayoral frontrunner, and—mathematically speaking—a coherence attractor. Where Trump radiated volatility, Mamdani projects equilibrium.</p>
+        <p>His field strength—what I call the <em>M→N coupling constant</em>, <span style="white-space:nowrap">K<sub>M→N</sub> ≈ 0.45</span>—means the local signal of New York is bleeding upward into the national bandwidth. The numbers show it: chaos energy is decaying.</p>
+
+        <div class="pull"><p>“Every democracy has a resonant frequency. Push it too hard, and it shakes itself apart.”</p></div>
+
+        <h2>III. The Rebalance Function</h2>
+        <div class="eq">
+          <div class="label">Equation 2 — Future Intention Likelihood Scale</div>
+          <div class="math">FILS = σ( ΔUCIP − ΔTTCF + P )</div>
+          <div class="desc">When <strong>FILS &gt; 0.6</strong>, the national field begins to self‑correct. Current reading: <strong>0.62</strong>.</div>
+        </div>
+        <p>It’s the faint click of an engine re‑firing after years of knock.</p>
+
+        <h2>IV. The AI Torque Problem</h2>
+        <p>While one system heals, another threatens to shear the gearbox. Artificial intelligence and robotics add unprecedented torque to the economy, but torque without redistribution is just mechanical stress.</p>
+        <div class="eq">
+          <div class="label">Equation 3 — Productive Surplus Equilibrium</div>
+          <div class="math">d(UCIP)/dt = φ·(shared benefit) − D·(displacement)</div>
+          <div class="desc"><strong>φ</strong> = AI surplus; <strong>D</strong> = job displacement. Sharing surplus through public options, data dividends, and worker voice stabilizes the field.</div>
+        </div>
+
+        <h2>V. Frequency and the Human Brain</h2>
+        <p>Trump tuned the national psyche to <strong>~20 Hz</strong>, the anxious beta band. Mamdani’s coherence hums closer to <strong>~10 Hz</strong>, the calm alpha wave. That’s not metaphor—it’s resonance. Societies, like brains, seek rhythm.</p>
+
+        <h2>VI. The Field Repairs Itself</h2>
+        <p>Every chaotic phase generates its inverse. The same laws that govern feedback loops in circuitry apply to public life: energy disperses, equilibrium returns. New York’s election is not just municipal politics. It’s proof that local coherence can retune a continental field.</p>
+        <p>If we extend that same physics to AI governance and economic design, the math stops describing balance—and starts ensuring it.</p>
+
+        <div class="pull"><p>The system isn’t broken. It’s merely out of tune. And the nation, at last, is learning to hear itself again.</p></div>
+
+        <div class="footnote">
+          <p class="sig"><strong>Kevin Day</strong> served aboard the USS <em>Princeton</em> during the 2004 “Tic Tac” encounters. He developed the Unified Cosmic Intention Postulate (UCIP) and the Future Intention Likelihood Scale (FILS), frameworks for understanding how human intention interacts with physical and social systems.</p>
+        </div>
+      </main>
+
+      <aside aria-label="Sidebar">
+        <div class="box">
+          <h3>About the Math</h3>
+          <p><strong>UCIP</strong> (coherence) rises with inclusive leadership; <strong>TTCF</strong> (entropy) rises with fear. <strong>FILS</strong> computes the probability of rebalancing.</p>
+        </div>
+        <div class="box">
+          <h3>Current Readings</h3>
+          <p><strong>K<sub>M→N</sub> ≈ 0.45</strong><br/>Local → national coupling</p>
+          <p><strong>FILS ≈ 0.62</strong><br/>Rebalance threshold crossed</p>
+        </div>
+        <div class="box">
+          <h3>Further Reading</h3>
+          <p><a href="#">Intention Theory: A Primer</a><br/><a href="#">FILS and Field Dynamics</a><br/><a href="#">AI Surplus & Social Floors</a></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>
