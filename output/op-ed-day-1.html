@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{ title | default("Op-Ed Title") }} — {{ author | default("Kevin M. Day") }}</title>
+
+<!-- Typography & Layout -->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #111; --muted:#666; --rule:#e8e8e8;
+    --link:#0b63ff; --accent:#0f766e; /* teal accent for “intention physics” */
+    --note:#fafafa; --chip:#0f766e15;
+    --code:#0b63ff; --pull:#1f2937; --figure-cap:#555;
+    --font-serif: "Georgia", "Times New Roman", serif;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    --maxw: 760px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c0d10; --fg:#e9eaee; --muted:#a7adba; --rule:#222632;
+      --note:#0f1220; --chip:#0f766e33; --pull:#e9eaee; --figure-cap:#adb5bd;
+    }
+  }
+  body { margin:0; background:var(--bg); color:var(--fg); line-height:1.65; }
+  .wrap { max-width: var(--maxw); margin: 48px auto; padding: 0 20px; font-family: var(--font-serif); }
+  .kicker { font-family: var(--font-sans); text-transform: uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+  h1 { font-size: 40px; line-height:1.18; margin:.25em 0 .2em; }
+  .byline { color: var(--muted); margin-bottom: 18px; font-family: var(--font-sans); }
+  .lede { font-size: 20px; margin: 18px 0 8px; }
+  hr.rule { border:0; height:1px; background: var(--rule); margin: 22px 0; }
+
+  /* Meta-Blocks */
+  .meta-bar { display:flex; gap:10px; flex-wrap:wrap; margin: 6px 0 22px; }
+  .chip { font-family: var(--font-sans); font-size: 12px; padding: 6px 10px; border-radius: 999px; background: var(--chip); color: var(--accent); border: 1px solid transparent; }
+  .metrics { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin:20px 0; }
+  .metric-card { border:1px solid var(--rule); border-radius: 12px; padding: 14px; background: var(--note); }
+  .metric-title { font-family: var(--font-sans); font-size: 12px; color: var(--muted); letter-spacing:.04em; text-transform: uppercase; }
+  .metric-value { font-size: 28px; font-weight:700; margin-top:6px; }
+
+  /* Body */
+  h2 { font-size: 26px; margin: 28px 0 8px; }
+  p { margin: 12px 0; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Pullquote */
+  .pull { border-left: 4px solid var(--accent); padding: 10px 16px; background: var(--chip); margin: 18px 0; font-style: italic; }
+
+  /* Figure */
+  figure { margin: 18px 0; }
+  figure img { width:100%; height:auto; border-radius: 12px; display:block; }
+  figcaption { text-align:center; color: var(--figure-cap); font-size: 14px; margin-top: 6px; }
+
+  /* Equation + Table blocks */
+  .equation, .datablock { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--note); border:1px solid var(--rule); border-radius: 12px; padding: 14px; overflow:auto; }
+  .equation { font-size: 15px; }
+  .datablock { font-size: 14px; white-space: pre-wrap; }
+
+  /* Footnotes */
+  .footnotes { border-top:1px solid var(--rule); margin-top: 32px; padding-top: 10px; font-size: 14px; }
+  .fn { color: var(--muted); }
+
+  /* TOC */
+  .toc { font-family: var(--font-sans); background: var(--note); border:1px solid var(--rule); padding: 12px; border-radius: 12px; margin: 14px 0 20px; }
+  .toc strong { text-transform: uppercase; font-size: 12px; color: var(--muted); letter-spacing:.05em; }
+  .toc a { display:block; padding: 4px 0; }
+
+  /* Print */
+  @media print{
+    .theme-toggle, .toc { display:none !important; }
+    body { background:#fff; color:#000; }
+  }
+
+  /* Small helper classes */
+  .muted { color: var(--muted); }
+  .center { text-align:center; }
+</style>
+
+<!-- MathJax for equations (optional) -->
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+</head>
+<body>
+
+<div class="wrap">
+  <!-- THEME TOGGLE (optional) -->
+  <div class="theme-toggle" style="display:flex; justify-content:flex-end;">
+    <button id="toggleTheme" style="font-family:var(--font-sans); font-size:12px; padding:6px 10px; border-radius:8px; border:1px solid var(--rule); background:var(--note); color:var(--fg); cursor:pointer;">Toggle Theme</button>
+  </div>
+
+  <!-- Kicker / Title / Byline -->
+  <div class="kicker">{{ kicker | default("DEMOCRACY & SYSTEMS THEORY") }}</div>
+  <h1>{{ title | default("When Intention Turns Tactical: How the Executive Field Is Re-Shaping American Democracy") }}</h1>
+  <div class="byline">{{ byline | default("By Kevin M. Day — {{ date | default('October 30, 2025') }}") }}</div>
+
+  <!-- Meta chips (map from YAML arrays) -->
+  <div class="meta-bar">
+    <!-- Example chips -->
+    {% for tag in tags | default(["Intention Physics","RippleTruth","FILS","UCIP"]) %}
+      <span class="chip">{{ tag }}</span>
+    {% endfor %}
+  </div>
+
+  <!-- Optional Table of Contents (auto-filled by JS below) -->
+  <div class="toc" id="toc">
+    <strong>In this piece</strong>
+    <!-- links inserted here -->
+  </div>
+
+  <!-- Lede paragraphs -->
+  <p class="lede">{{ lede_1 | default("When the Pentagon confirms new “reaction forces” ... an authoritarian field expanding inside the democratic system itself.") }}</p>
+  <p class="lede">{{ lede_2 | default("Intention — the measurable energy behind collective will — behaves like a field that pushes outcomes long before events occur.") }}</p>
+
+  <hr class="rule" />
+
+  <!-- SECTION 1 -->
+  <h2 id="s-coup">{{ section_1_title | default("The Coup That Doesn’t March") }}</h2>
+
+  <figure>
+    <img src="{{ image_hero | default('hero.jpg') }}" alt="{{ image_hero_alt | default('Long-exposure trails toward the Capitol') }}" />
+    <figcaption>{{ image_hero_caption | default("Long-exposure photograph of Washington, D.C. — blurred light trails circle toward the Capitol, symbolizing quiet movement beneath the calm surface.") }}</figcaption>
+  </figure>
+
+  <p>{{ s1_p1 | default("The first attempt to subvert electoral order came with spectacle. The next, if it comes, will arrive in paperwork: emergency powers, classified briefings, pre-positioned “reaction forces.”") }}</p>
+  <div class="equation">
+    <!-- YAML: equations.ucip -->
+    <strong>UCIP feedback form:</strong> &nbsp; $\\Delta P = f(\\Delta I_{auth},\\, \\Delta I_{inst},\\, \\Delta I_{civ})$
+  </div>
+  <p>{{ s1_p2 | default("When authoritarian intention grows faster than institutional and civic counter-forces, feedback turns positive and self-reinforcing.") }}</p>
+
+  <div class="pull">“Democracy is less a structure than a standing wave — it persists only while enough citizens emit coherence into it.”</div>
+
+  <!-- SECTION 2 -->
+  <h2 id="s-equation">{{ section_2_title | default("The Equation of Power") }}</h2>
+  <div class="equation">
+    <!-- YAML: equations.democracy -->
+    <code>F_democracy = I_inst + I_civ − I_auth</code>
+  </div>
+  <ul>
+    <li><em>I<sub>inst</sub></em> — institutional integrity: courts, norms, lawful transitions.</li>
+    <li><em>I<sub>civ</sub></em> — civic coherence: trust, participation, public vigilance.</li>
+    <li><em>I<sub>auth</sub></em> — authoritarian impulse: consolidation, crisis framing, militarization.</li>
+  </ul>
+
+  <!-- Quick metric cards (map to YAML numeric fields) -->
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="metric-title">Institutional Intention</div>
+      <div class="metric-value">{{ metrics.i_inst | default("0.54") }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Civic Coherence</div>
+      <div class="metric-value">{{ metrics.i_civ | default("0.58") }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Authoritarian Intention</div>
+      <div class="metric-value">{{ metrics.i_auth | default("0.67") }}</div>
+    </div>
+  </div>
+
+  <p>{{ s2_p1 | default("When F_democracy falls below zero, the republic drifts toward entropic control — the normalization of exceptional measures.") }}</p>
+  <div class="equation"><code>F_democracy = 0.54 + 0.58 − 0.67 = 0.45</code></div>
+
+  <!-- SECTION 3 -->
+  <h2 id="s-diagnostics">{{ section_3_title | default("RippleTruth Diagnostics") }}</h2>
+  <div class="datablock">
+Domain                                 Transparency Index   Intention Risk
+Military Deployment for Civil Use      0.52                 Elevated
+Executive Crisis Communication         0.46                 Rising
+Civic Discourse & Media Oversight      0.78                 Stabilizing
+  </div>
+
+  <!-- SECTION 4 -->
+  <h2 id="s-resilience">{{ section_4_title | default("The Mathematics of Resistance") }}</h2>
+  <div class="equation"><code>F_resilience = (I_inst + I_civ) × (1 − T_chaos)</code></div>
+  <p>{{ s4_p1 | default("Every 0.1 drop in T_chaos increases democratic resilience by roughly 12 percent. Small acts of coherence carry exponential power near the tipping point.") }}</p>
+
+  <!-- Closing -->
+  <p>{{ close_1 | default("Intention can change instantly. Elections, civic surges, and transparent investigations can realign the vector.") }}</p>
+  <p>{{ close_2 | default("These signals aren’t prophecy; they’re measurements. The field still answers to us, if we choose to correct it.") }}</p>
+
+  <!-- Footnotes / Sources -->
+  <div class="footnotes">
+    <div class="fn"><strong>Notes:</strong> {{ notes | default("Model inputs include RippleTruth, FILS, UCIP. Replace with your citations or links.") }}</div>
+  </div>
+</div>
+
+<script>
+  // Simple dark/light toggle (persists for the session)
+  document.getElementById('toggleTheme').addEventListener('click', ()=>{
+    const cl = document.documentElement.classList;
+    cl.toggle('force-light'); cl.toggle('force-dark');
+  });
+
+  // Generate a mini TOC from h2s
+  const toc = document.getElementById('toc');
+  const hs = document.querySelectorAll('h2[id]');
+  hs.forEach(h=>{
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    toc.appendChild(a);
+  });
+</script>
+
+</body>
+</html>

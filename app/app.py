@@ -68,10 +68,6 @@ def save_yaml(p: pathlib.Path, data: Dict[str, Any]) -> None:
 
 # ---------- equation loading helper ----------
 
-
-
-
-
 def load_equations_yaml(p: pathlib.Path) -> Dict[str, Any]:
     """
     Load equations YAML and ALWAYS return {"equations": {...}}.
@@ -129,7 +125,6 @@ def preview_yaml_box(data: Dict[str, Any], filename: str = "draft.yaml") -> None
     )
 
 
-
 # --- Equations helpers -------------------------------------------------
 
 def normalize_equations_obj(eq_all: Any) -> Dict[str, Dict[str, Any]]:
@@ -163,6 +158,67 @@ def normalize_equations_obj(eq_all: Any) -> Dict[str, Dict[str, Any]]:
                     if isinstance(v, dict):
                         out[str(k)] = v
     return out
+
+# --- Intention meta guard (in-memory) ----------------------------------------
+def ensure_meta_signals(
+    data: Dict[str, Any],
+    eq_path: pathlib.Path,
+    selected_eq: str,
+) -> Dict[str, Any]:
+    """
+    Enrich an in-memory YAML dict with intention meta:
+      - Loads equations from eq_path and normalizes
+      - Computes signals via extract_signals(data)
+      - Applies weights from `selected_eq` (or equal weights if None)
+      - Writes into data['meta'] = {signals, ripple_score, equation, weights}
+      - Returns the updated dict (no file writes here)
+    """
+    # Ensure we have a dict to work with
+    if not isinstance(data, dict):
+        data = {}
+
+    # Resolve which equation name to use (UI select > data['intention_equation'] > meta.equation)
+    eq_name = (
+        selected_eq
+        or data.get("intention_equation")
+        or ((data.get("meta") or {}).get("equation"))
+        or "none"
+    )
+
+    # Load equations via canonical loader (always returns {"equations": {...}} when possible)
+    eq_raw = load_equations_yaml(eq_path)
+    eq_dict: Dict[str, Dict[str, Any]] = {}
+
+    if isinstance(eq_raw, dict):
+        # Preferred canonical shape
+        if isinstance(eq_raw.get("equations"), dict):
+            eq_dict = eq_raw["equations"]
+        else:
+            # Be permissive: if it's already a mapping of equations, accept it
+            if all(isinstance(v, dict) for v in eq_raw.values()):
+                eq_dict = eq_raw
+
+    # Compute normalized signals from current data
+    signals: Dict[str, float] = extract_signals(data)
+
+    # Choose weights (from chosen equation if present; fallback = equal weights)
+    weights: Dict[str, float] = {}
+    if isinstance(eq_dict, dict) and eq_name in eq_dict and isinstance(eq_dict[eq_name], dict):
+        weights = (eq_dict[eq_name].get("weights") or {}) if isinstance(eq_dict[eq_name].get("weights"), dict) else {}
+    if not weights:
+        weights = {k: 1.0 for k in signals.keys()}
+
+    # Compute score
+    score = apply_equation(signals, weights)
+
+    # Persist into the in-memory article dict
+    meta = data.setdefault("meta", {})
+    meta["signals"] = {k: float(v) for k, v in signals.items()}
+    meta["ripple_score"] = float(score)
+    meta["equation"] = str(eq_name)
+    meta["weights"] = {k: float(v) for k, v in weights.items()}
+
+    return data
 
 def render_selected(paths: List[str], env_vars: Dict[str, str]) -> subprocess.CompletedProcess:
     # render.py already accepts file globs; we pass paths (or nothing to render all)
@@ -834,31 +890,73 @@ with tab_compose:
         st.write("After rendering, find your pages in `/output`. The GitHub Pages site will update after you push.")
 
     # --- One-click: YAML → LLM → Render → Preview refresh ---
-    st.markdown("### ✨ Write & Render with Intention")
-    if st.button("⚡ Write & Render Now", key="rw_write_render", disabled=(choice == "(new)")):
-        try:
-            proc = write_render_refresh(choice if 'choice' in locals() else None, data, openai_key, mock_mode)
-            if proc.returncode == 0:
-                st.success("Draft written and rendered successfully.")
 
-                # Clickable links to outputs
+#############
+    
+    # --- One-click: YAML -> Intention Meta -> LLM -> Render -> Preview refresh ---
+    st.markdown("### Write & Render with Intention")
+    if st.button("Write & Render Now", key="rw_write_render", disabled=(choice == "(new)")):
+
+        try:
+            # 1) Enrich YAML with meta signals using chosen intention equation
+            eq_path = ROOT / "config" / "equations.yaml"
+            selected_eq = (data or {}).get("intention_equation", "None")
+            data = ensure_meta_signals(data or {}, eq_path, selected_eq)
+
+            # 2) Persist YAML before writing (if we're editing an existing draft)
+            if choice and choice != "(new)":
+                save_yaml(ARTICLES_DIR / choice, data)
+
+            # 3) Run your existing writer + renderer (LLM + render.py)
+            proc = write_render_refresh(choice if 'choice' in locals() else None, data, openai_key, mock_mode)
+
+            # 4) Show logs for transparency
+            with st.expander("Write/Render logs"):
+                st.code((proc.stdout or "") + "\n" + (proc.stderr or ""))
+
+            # 5) Status + clickable output links
+            if proc.returncode == 0:
                 slug = _guess_slug_from_yaml(data)
                 out_html, out_md = find_post_outputs(slug)
-                lines = [":white_check_mark: **Rendered successfully** to `/output`."]
+                msg_lines = ["Rendered successfully to /output."]
                 if out_html:
-                    lines.append(f"- View HTML: [{slug}.html]({out_html.as_uri()})")
+                    msg_lines.append(f"- View HTML: [{slug}.html]({out_html.as_uri()})")
                 if out_md:
-                    lines.append(f"- View Markdown: [{slug}.md]({out_md.as_uri()})")
-                st.success("\n".join(lines))
+                    msg_lines.append(f"- View Markdown: [{slug}.md]({out_md.as_uri()})")
+                st.success("\n".join(msg_lines))
             else:
                 st.error("Render failed.")
-
-            with st.expander("Write/Render logs"):
-                st.code(proc.stdout + "\n" + proc.stderr)
-
+            # 6) Refresh the embedded preview panel
             st.rerun()
         except Exception as e:
             st.error(f"Write & Render failed: {e}")
+
+def ensure_meta_signals(data: dict, eq_path, selected_eq):
+    """Merge chosen intention equation & RippleScore data into YAML meta."""
+    try:
+        import yaml
+        with open(eq_path, "r", encoding="utf-8") as f:
+            eq_data = yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        eq_data = {}
+
+    # Load equation values if valid
+    signals = {}
+    if selected_eq and selected_eq in eq_data:
+        signals.update(eq_data[selected_eq])
+
+    # Merge RippleScores or FILS/UCIP/TTCF if already present
+    for k in ["RippleScore", "FILS", "UCIP", "TTCF"]:
+        if k in data.get("meta", {}):
+            signals[k] = data["meta"][k]
+
+    # Attach to data meta
+    data.setdefault("meta", {}).update(signals)
+    return data
+
+
+##########
+
 
     # --- Live in-app article preview & quick render ---
     st.markdown("### Live article preview")

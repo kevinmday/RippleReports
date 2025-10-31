@@ -26,10 +26,19 @@ publish:
   tags:
   - ripplewriter
 format: Op-Ed
-intention_equation: None
+intention_equation: Narrative Arc (Setup → Conflict → Resolution)
 generated_sections:
   lede: Op-eds can be both opinionated and honest when they show their work.
   body: "This piece argues for intention transparency via YAML → LLM → publish.\n\
     \        It lays out limits and cites a few sources by name."
   counterpoints: LLMs hallucinate; editorial review remains essential.
   conclusion: Let's publish with receipts and iteration hooks.
+meta:
+  ripple_score: 0.0
+  signals:
+    coherence: 0.06
+    evidence: 0.1667
+    novelty: 0.0375
+    clarity: 0.0
+    sentiment: 0.7
+  equation: equations
