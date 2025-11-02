@@ -1,13 +1,20 @@
-﻿PyYAML==6.0.2
+﻿# --- Core dependencies ---
+PyYAML==6.0.2
 Jinja2==3.1.4
 openai==1.37.1
 python-dotenv==1.0.1
 streamlit==1.38.0
 pydantic==2.9.2
 GitPython==3.1.43
+
+# --- File and document processing ---
 pypdf
 python-docx
 pytesseract
-streamlit-paste-image-button
 Pillow
 requests
+
+# --- Streamlit community components ---
+# Direct GitHub install (official source)
+git+https://github.com/andfanilo/streamlit-paste-button.git
+
