@@ -10,23 +10,133 @@ from datetime import date
 from git import Repo, GitCommandError
 from streamlit_paste_button import paste_image_button
 import streamlit.components.v1 as components
+import re
+from pathlib import Path
 
+# --- Define root path for RippleWriter ---
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# ---- Cross-tab session keys ----
+CURRENT_DRAFT_KEY = "rw_current_draft"
+CURRENT_EQ_KEY    = "rw_current_equation"
+
+def ensure_session_defaults():
+    if CURRENT_DRAFT_KEY not in st.session_state:
+        st.session_state[CURRENT_DRAFT_KEY] = "(new)"
+    if CURRENT_EQ_KEY not in st.session_state:
+        st.session_state[CURRENT_EQ_KEY] = "none"  # or an id that exists in config/equations.yaml
+
+ensure_session_defaults()
 
 # Ensure parent folder is on sys.path so we can import llm_client.py
-ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# --- Define key directories ---
+ARTICLES_DIR = ROOT / "articles"
+OUTPUT_DIR = ROOT / "output"
+CONFIG_DIR = ROOT / "config"
+
+def get_draft_options() -> list[str]:
+    files = ["(new)"]
+    if (ROOT / "articles").exists():
+        for p in sorted((ROOT / "articles").glob("*.yaml")):
+            files.append(p.name)
+    return files
+
+def get_equation_options() -> list[tuple[str, str]]:
+    cfg = yaml.safe_load((ROOT / "config" / "equations.yaml").read_text(encoding="utf-8")) or {}
+    eqs = cfg.get("equations", []) or []
+    # (id, display-name)
+    return [(e["id"], e.get("name", e["id"])) for e in eqs]
+
+def bind_draft_selectbox(label: str, key_prefix: str, help: str | None = None):
+    opts = get_draft_options()
+    cur  = st.session_state.get(CURRENT_DRAFT_KEY, "(new)")
+    idx  = opts.index(cur) if cur in opts else 0
+
+    def _on_change():
+        st.session_state[CURRENT_DRAFT_KEY] = st.session_state[f"{key_prefix}_draft"]
+
+    return st.selectbox(label, opts, index=idx, key=f"{key_prefix}_draft", on_change=_on_change, help=help)
+
+def bind_equation_selectbox(label: str, key_prefix: str, help: str | None = None):
+    pairs   = get_equation_options()           # [(id, name)]
+    eq_ids  = [p[0] for p in pairs]
+    eq_disp = [p[1] for p in pairs]
+    cur     = st.session_state.get(CURRENT_EQ_KEY, eq_ids[0] if eq_ids else "none")
+    idx     = eq_ids.index(cur) if cur in eq_ids else 0
+
+    def _on_change():
+        chosen_idx = st.session_state[f"{key_prefix}_eq_idx"]
+        st.session_state[CURRENT_EQ_KEY] = eq_ids[chosen_idx]
+
+    return st.selectbox(label, eq_disp, index=idx, key=f"{key_prefix}_eq_idx", on_change=_on_change, help=help)
+
+def get_draft_filenames() -> list[str]:
+    """Return list of YAML drafts in the /articles directory."""
+    files = ["(new)"]
+    if ARTICLES_DIR.exists():
+        for p in sorted(ARTICLES_DIR.glob("*.yaml")):
+            files.append(p.name)
+    return files
+
+# --- Import LLM client ---
 from llm_client import LLMClient
 
 # Define key directories
 ARTICLES_DIR = ROOT / "articles"
 OUTPUT_DIR   = ROOT / "output"
 
+# --- cross-tab state keys ---------------------------------
+CURRENT_DRAFT_KEY = "rw_current_draft"
+
+def set_current_draft(name: str) -> None:
+    import streamlit as st
+    st.session_state[CURRENT_DRAFT_KEY] = name
+
+def get_current_draft(default: str = "(new)") -> str:
+    import streamlit as st
+    return st.session_state.get(CURRENT_DRAFT_KEY, default)
+
+# --- Utility: list YAML drafts ---
+def get_draft_filenames():
+    """
+    Return a list of YAML draft filenames in the /articles directory.
+    Always includes '(new)' as the first option.
+    """
+    drafts = ["(new)"]
+    if ARTICLES_DIR.exists():
+        for path in sorted(ARTICLES_DIR.glob("*.yaml")):
+            drafts.append(path.name)
+    return drafts
+
 # Define brand assets
 BRAND_DIR = ROOT / "app" / "static" / "branding"
 LOGO_PNG  = BRAND_DIR / "ripple-logo.png"
 LOGO_SVG  = BRAND_DIR / "ripple-logo.svg"
+
+# at the top of file (near other constants)
+CURRENT_DRAFT_KEY = "rw_current_draft"
+
+# --- Compose (YAML) ---
+draft_options = get_draft_filenames()  # e.g. ["(new)", "BlogPost.yaml", ...]
+default_draft = st.session_state.get(CURRENT_DRAFT_KEY, "(new)")
+
+draft = st.selectbox(
+    "Select draft",
+    draft_options,
+    index=draft_options.index(default_draft) if default_draft in draft_options else 0,
+    key="compose_select_draft",
+)
+
+# keep session in sync so other tabs pick it up
+if st.session_state.get(CURRENT_DRAFT_KEY) != draft:
+    st.session_state[CURRENT_DRAFT_KEY] = draft
+
 
 # --- Branded header (logo + title) ---
 def render_header():
@@ -99,6 +209,47 @@ def load_equations_yaml(p: pathlib.Path) -> Dict[str, Any]:
         return {"equations": eqs}
 
     return {"equations": {}}
+
+
+from typing import List, Dict, Any
+from pathlib import Path
+import yaml
+
+ROOT         = Path(__file__).resolve().parent.parent
+ARTICLES_DIR = ROOT / "articles"
+CONFIG_DIR   = ROOT / "config"
+
+def list_yaml_files() -> List[Path]:
+    ARTICLES_DIR.mkdir(exist_ok=True)
+    return sorted(ARTICLES_DIR.glob("*.yaml"))
+
+def load_equations() -> List[Dict[str, Any]]:
+    eq_path = CONFIG_DIR / "equations.yaml"
+    with open(eq_path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("equations", [])
+
+#####def bind_draft_selectbox(label: str, key_prefix: str) -> None:
+###    files   = list_yaml_files()
+###    names   = [f.name for f in files]
+###    current = st.session_state.get(CURRENT_DRAFT_KEY, "(new)")
+###    choices = ["(new)"] + names
+###    if current not in choices:
+###        choices = ["(new)"] + sorted(set(names + [current]))
+###    choice = st.selectbox(label, choices, index=choices.index(current), key=f"{key_prefix}_draft_sb")
+###    st.session_state[CURRENT_DRAFT_KEY] = choice
+
+def bind_equation_selectbox(label: str, key_prefix: str) -> None:
+    eqs     = load_equations()
+    options = [e["id"] for e in eqs] or ["none"]
+    current = st.session_state.get(CURRENT_EQ_KEY, "none")
+    if current not in options:
+        options = [current] + options
+    labels  = {e["id"]: f'{e["name"]} — {e.get("desc","")}'[:80] for e in eqs}
+    shown   = [labels.get(opt, opt) for opt in options]
+    idx     = options.index(current)
+    sel     = st.selectbox(label, shown, index=idx, key=f"{key_prefix}_eq_sb")
+    st.session_state[CURRENT_EQ_KEY] = options[shown.index(sel)]
 
 
 def preview_yaml_box(data: Dict[str, Any], filename: str = "draft.yaml") -> None:
@@ -283,6 +434,31 @@ def write_render_refresh(choice: str | None,
 
     paths_arg = [str(ARTICLES_DIR / choice)] if (choice and choice != "(new)") else []
     return render_selected(paths_arg, env_vars)
+
+# -------- Inline Preview helpers --------------------------------------------
+OUTPUT_DIR = (ROOT / "output").resolve()
+POSTS_DIR = OUTPUT_DIR / "posts"
+
+def _latest_post_html():
+    """Return newest HTML in /output/posts or None."""
+    if not POSTS_DIR.exists():
+        return None
+    htmls = sorted(POSTS_DIR.glob("*.html"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return htmls[0] if htmls else None
+
+def _inject_base_href(html_text: str, base_uri: str) -> str:
+    """Ensure relative links (css/img) work inside the preview iframe."""
+    if re.search(r"<base[^>]*>", html_text, flags=re.I):
+        return re.sub(r"<base[^>]*>", f"<base href='{base_uri}'>", html_text, flags=re.I)
+    if re.search(r"(?i)<head>", html_text):
+        return re.sub(r"(?i)<head>", f"<head><base href='{base_uri}'>", html_text, count=1)
+    return f"<base href='{base_uri}'>\n{html_text}"
+
+def load_html_for_preview(html_path: Path) -> str:
+    html = html_path.read_text(encoding="utf-8")
+    base_uri = OUTPUT_DIR.as_uri() + "/"
+    return _inject_base_href(html, base_uri)
+# ---------------------------------------------------------------------------
 
 def commit_and_push(repo_path: pathlib.Path, message: str, branch: str = "main") -> str:
     repo = Repo(str(repo_path))
@@ -702,11 +878,37 @@ if st.sidebar.button("Open output folder"):
 
 # ---------- main UI ----------
 
-tab_compose, tab_source, tab_meta = st.tabs(["Compose (YAML)", "Source → Draft", "Meta-Analysis"])
-
+tab_compose, tab_source, tab_meta, tab_preview = st.tabs(
+    ["Compose (YAML)", "Source → Draft", "Meta-Analysis", "Preview"]
+)
 # -------------------------
 # Tab 1: Compose (YAML)
 # -------------------------
+
+###with tab_compose:
+###    bind_draft_selectbox("Select draft", key_prefix="compose")
+####    bind_equation_selectbox("Intention Equation", key_prefix="compose")
+    # (rest of your Compose code…)
+####
+###with tab_source:
+###    bind_draft_selectbox("Select draft", key_prefix="source")
+###    bind_equation_selectbox("Intention Equation", key_prefix="source")
+   ### # (rest of your Source→Draft code…)
+###
+###with tab_meta:
+###    bind_draft_selectbox("Select draft", key_prefix="meta")
+###    bind_equation_selectbox("Intention Equation", key_prefix="meta")
+###    # (rest of your Meta code…)
+###
+###with tab_preview:
+    ###bind_draft_selectbox("Select draft", key_prefix="preview")
+    ###bind_equation_selectbox("Intention Equation", key_prefix="preview")
+    #### (rest of your Preview code…)
+
+
+current_draft = st.session_state[CURRENT_DRAFT_KEY]
+current_eq_id = st.session_state[CURRENT_EQ_KEY]
+
 with tab_compose:
     colL, colR = st.columns([2, 3])
 
@@ -718,8 +920,22 @@ with tab_compose:
 
         files = list_yaml_files()
         names = [f.name for f in files]
-        choice = st.selectbox("Select draft", ["(new)"] + names, index=0)
+        
+        # Remember user's selection globally (Compose tab is the source of truth)
+        _default_compose = st.session_state.get("rw_current_draft", "(new)")
+        if _default_compose not in (["(new)"] + names):
+            _default_compose = "(new)"
 
+        choice = st.selectbox(
+            "Select draft",
+            ["(new)"] + names,
+            index=(["(new)"] + names).index(_default_compose),
+            key="rw_select_compose",
+        )
+
+        # Persist for other tabs to inherit
+        st.session_state["rw_current_draft"] = choice
+      
         # ---- shared option lists (used for new + existing) ----
         format_options = [
             "Op-Ed", "Academic Paper", "Technical Report", "Press Release",
@@ -772,6 +988,10 @@ with tab_compose:
         else:
             current_path = ARTICLES_DIR / choice
             data = load_yaml(current_path)
+
+            # Share current selection across tabs
+            st.session_state["rw_choice"] = choice
+            st.session_state["rw_data"] = data
 
             # Show Ripple score if previously saved by Meta-Analysis
             meta = data.get("meta") or {}
@@ -889,10 +1109,7 @@ with tab_compose:
                 st.markdown(f"[Open site index (local file)]({idx.as_uri()})")
         st.write("After rendering, find your pages in `/output`. The GitHub Pages site will update after you push.")
 
-    # --- One-click: YAML → LLM → Render → Preview refresh ---
-
-#############
-    
+      
     # --- One-click: YAML -> Intention Meta -> LLM -> Render -> Preview refresh ---
     st.markdown("### Write & Render with Intention")
     if st.button("Write & Render Now", key="rw_write_render", disabled=(choice == "(new)")):
@@ -953,10 +1170,6 @@ def ensure_meta_signals(data: dict, eq_path, selected_eq):
     # Attach to data meta
     data.setdefault("meta", {}).update(signals)
     return data
-
-
-##########
-
 
     # --- Live in-app article preview & quick render ---
     st.markdown("### Live article preview")
@@ -1033,6 +1246,28 @@ def ensure_meta_signals(data: dict, eq_path, selected_eq):
 # -------------------------
 # Tab 2: Source → Draft
 # -------------------------
+
+with tab_compose:
+    bind_draft_selectbox("Select draft", key_prefix="compose")
+    bind_equation_selectbox("Intention Equation", key_prefix="compose")
+    # (rest of your Compose code…)
+
+with tab_source:
+    bind_draft_selectbox("Select draft", key_prefix="source")
+    bind_equation_selectbox("Intention Equation", key_prefix="source")
+    # (rest of your Source→Draft code…)
+
+with tab_meta:
+    bind_draft_selectbox("Select draft", key_prefix="meta")
+    bind_equation_selectbox("Intention Equation", key_prefix="meta")
+    # (rest of your Meta code…)
+
+with tab_preview:
+    bind_draft_selectbox("Select draft", key_prefix="preview")
+    bind_equation_selectbox("Intention Equation", key_prefix="preview")
+    # (rest of your Preview code…)
+
+
 with tab_source:
     st.subheader("Source → Draft (paste or drop files)")
     colA, colB = st.columns([2, 1])  # keep colB for future metadata/actions
@@ -1067,6 +1302,46 @@ with tab_source:
 # -------------------------
 # Tab 3: Meta-Analysis
 # -------------------------
+
+###with tab_compose:
+###    bind_draft_selectbox("Select draft", key_prefix="compose")
+###    bind_equation_selectbox("Intention Equation", key_prefix="compose")
+### (rest of your Compose code…)
+###
+###with tab_source:
+###    bind_draft_selectbox("Select draft", key_prefix="source")
+###    bind_equation_selectbox("Intention Equation", key_prefix="source")
+###    # (rest of your Source→Draft code…)
+###
+###with tab_meta:
+###    bind_draft_selectbox("Select draft", key_prefix="meta")
+###    bind_equation_selectbox("Intention Equation", key_prefix="meta")
+###    # (rest of your Meta code…)
+###
+###with tab_preview:
+###    bind_draft_selectbox("Select draft", key_prefix="preview")
+###    bind_equation_selectbox("Intention Equation", key_prefix="preview")
+###    # (rest of your Preview code…)
+
+
+with tab_meta:
+    st.subheader("Meta-Analysis (Ripple score)")
+
+    # Prefer the selection from Compose
+    choice = st.session_state.get("rw_choice")
+    data   = st.session_state.get("rw_data", {})
+
+    files = list_yaml_files()
+    names = [f.name for f in files]
+
+    # Fallback picker if user hasn’t visited Compose yet
+    if not choice or choice == "(new)" or not names:
+        st.info("Pick or create a draft in **Compose** first. (Or select one below.)")
+        choice = st.selectbox("Select draft", names, index=0 if names else None, key="meta_draft_fallback")
+        if not choice:
+            st.stop()
+        data = load_yaml(ARTICLES_DIR / choice)
+
 with tab_meta:
     st.subheader("Meta-Analysis (Ripple score)")
 
@@ -1077,22 +1352,27 @@ with tab_meta:
         st.info("No drafts found. Create/save a draft in the Compose tab first.")
         st.stop()
 
-    draft_choice = st.selectbox("Select draft", names, index=0, key="meta_draft")
+    ###draft_choice = st.selectbox("Select draft", names, index=0, key="meta_draft")
 
-    # Load & normalize equations
-    eq_path = ROOT / "config" / "equations.yaml"
-    eq_dict = load_equations_yaml(eq_path)          # <-- always a dict now
-    eq_names = sorted(eq_dict.keys())               # list[str] for the dropdown
+    #### Load & normalize equations
+    ###eq_path = ROOT / "config" / "equations.yaml"
+    ###eq_dict = load_equations_yaml(eq_path)          # <-- always a dict now
+    ###eq_names = sorted(eq_dict.keys())               # list[str] for the dropdown
 
-    eq_choice = st.selectbox(
-        "Intention Equation",
-        ["None — Skip intention math."] + eq_names,
-        index=0,
-        key="meta_eq"
-    )
+    ###eq_choice = st.selectbox(
+    ###    "Intention Equation",
+    ###    ["None — Skip intention math."] + eq_names,
+    ###    index=0,
+    ###    key="meta_eq"
+    ###)
 
-    current_path = ARTICLES_DIR / draft_choice
-    article = load_yaml(current_path)
+    current_draft = st.session_state.get("rw_current_draft", "(new)")
+    if current_draft == "(new)":
+        st.warning("No draft selected — please choose or create one in Compose first.")
+        st.stop()
+
+    current_path = ARTICLES_DIR / current_draft
+    article = load_yaml(current_path)   
 
     colL, colR = st.columns([2, 1])
     with colL:
