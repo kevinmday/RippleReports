@@ -716,15 +716,25 @@ def ui_image_ingest():
         "2) Or drag & drop image files into the box underneath."
     )
 
+    
+    # Clipboard paste (disabled paste_image_button on Cloud)
+    _res = None
+    pasted_img = None
+    # placeholder skip: clipboard paste temporarily disabled
+    try:
+        pass
+    except Exception:
+        pass
+
     # Clipboard paste
     #_res = paste_image_button(label="📌 Paste image from clipboard", key="rw_pastebtn")
     #pasted_img = None
-    try:
-        if _res is not None and getattr(_res, "image_data", None) is not None:
-            pasted_img = _res.image_data  # wrapper case
-    except Exception:
-        if _res is not None:
-            pasted_img = _res  # direct PIL.Image
+    #try:
+    #    if _res is not None and getattr(_res, "image_data", None) is not None:
+    #        pasted_img = _res.image_data  # wrapper case
+    #except Exception:
+    #    if _res is not None:
+    #        pasted_img = _res  # direct PIL.Image
 
     if pasted_img is not None:
         images_dir = ARTICLES_DIR / "images"
