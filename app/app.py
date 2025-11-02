@@ -717,8 +717,8 @@ def ui_image_ingest():
     )
 
     # Clipboard paste
-    _res = paste_image_button(label="📌 Paste image from clipboard", key="rw_pastebtn")
-    pasted_img = None
+    #_res = paste_image_button(label="📌 Paste image from clipboard", key="rw_pastebtn")
+    #pasted_img = None
     try:
         if _res is not None and getattr(_res, "image_data", None) is not None:
             pasted_img = _res.image_data  # wrapper case
