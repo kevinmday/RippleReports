@@ -8,7 +8,7 @@ import yaml
 import streamlit as st
 from datetime import date
 from git import Repo, GitCommandError
-from streamlit_paste_button import paste_image_button
+#from streamlit_paste_button import paste_image_button
 import streamlit.components.v1 as components
 import re
 from pathlib import Path
