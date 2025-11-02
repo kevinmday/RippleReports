@@ -13,3 +13,4 @@ python-docx
 pytesseract
 Pillow
 requests
+streamlit-paste-button
