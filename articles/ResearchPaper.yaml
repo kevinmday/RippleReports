@@ -1,0 +1,173 @@
+# filename: paper-your-slug.yaml
+title: "Title of the Study: A Structured Investigation of X"
+short_title: "Structured Investigation of X"
+authors:
+  - name: "First Last"
+    affiliation: "Dept., University, City, Country"
+    orcid: "0000-0000-0000-0000"
+    email: "first.last@univ.edu"
+    roles: [Conceptualization, Methodology, Writing-Original-Draft]
+  - name: "Second Last"
+    affiliation: "Institute, City, Country"
+    orcid: ""
+    email: ""
+    roles: [Data Curation, Software, Validation, Writing-Review-&-Editing]
+corresponding_author: "first.last@univ.edu"
+
+affiliations:
+  - id: "A1"
+    name: "Department of …, University of …, City, Country"
+  - id: "A2"
+    name: "Institute of …, City, Country"
+
+date: 2025-10-31
+manuscript_type: "Original Research"
+format: "AcademicPaper"         # lets the renderer pick a paper layout
+keywords: ["keyword1", "keyword2", "keyword3"]
+disciplines: ["Computational Social Science", "Statistics"]
+
+identifiers:
+  doi: ""
+  arxiv: ""
+  osf: ""
+  preregistration: ""           # e.g., OSF/AsPredicted link
+
+funding:
+  - funder: "Agency / Grant No."
+    statement: "This work was supported by …"
+conflicts_of_interest: "The authors declare no competing interests."
+ethics:
+  irb_approval: "Approved by IRB #XXXX (Institution)."
+  consent: "Informed consent was obtained from all participants."
+  data_anonymization: "Data were de-identified per …"
+
+data_availability: "Data and code available at https://… under CC BY 4.0."
+code_availability: "Analysis scripts at https://…"
+materials_availability: "All materials and prompts included in Supplement."
+
+abstract: |
+  Provide a 150–250 word abstract covering: background, objective, methods,
+  key results (with effect sizes or estimates), limitations, and primary takeaway.
+
+lay_summary: |
+  A 2–4 sentence plain-language summary for non-specialists.
+
+# ---- Outline / Sections ------------------------------------------------------
+sections:
+  - hed: "1. Introduction"
+    copy: |
+      Brief background and gap. State research questions (RQs) or hypotheses (H1…).
+      Cite related work [@smith2021; @jones2022].
+
+  - hed: "2. Related Work"
+    copy: |
+      Organize prior literature by theme. Clarify how this study advances or tests it.
+
+  - hed: "3. Methods"
+    subsections:
+      - hed: "3.1 Design and Participants"
+        copy: |
+          Study design (e.g., randomized controlled, observational). Sampling,
+          inclusion/exclusion, power analysis, preregistration.
+      - hed: "3.2 Measures and Variables"
+        copy: |
+          Define all variables (operationalization), instruments, reliability/validity.
+      - hed: "3.3 Procedure"
+        copy: |
+          Data collection workflow; timelines; handling of missing data.
+      - hed: "3.4 Analysis Plan"
+        copy: |
+          Statistical models / algorithms with equations and assumptions.
+          Report α, corrections, priors, stopping rules.
+      - hed: "3.5 Robustness & Sensitivity"
+        copy: |
+          Alternative specifications, ablations, placebo tests.
+
+  - hed: "4. Results"
+    copy: |
+      Report descriptive stats and main estimates with CIs and exact p-values,
+      or Bayesian posteriors. Reference Tables/Figures (e.g., Fig.1, Tab.2).
+
+  - hed: "5. Discussion"
+    copy: |
+      Interpret effects, theoretical/practical implications, external validity,
+      comparison with prior work, and policy relevance.
+
+  - hed: "6. Limitations"
+    copy: |
+      Threats to validity (construct, internal, statistical conclusion, external).
+
+  - hed: "7. Conclusion"
+    copy: |
+      One paragraph with the primary answer to the RQs, plus next steps.
+
+  - hed: "Acknowledgments"
+    copy: |
+      Thanks to individuals/institutions (not meeting authorship criteria).
+
+# ---- Figures, Tables, Equations ---------------------------------------------
+figures:
+  - id: "fig1"
+    path: "images/fig1-main.png"
+    caption: "Effect of treatment on outcome across subgroups."
+    notes: "Error bars show 95% CI."
+  - id: "fig2"
+    path: "images/fig2-robustness.png"
+    caption: "Robustness checks across specifications."
+
+tables:
+  - id: "tab1"
+    caption: "Descriptive statistics."
+    csv: "tables/descriptives.csv"
+  - id: "tab2"
+    caption: "Main regression results."
+    csv: "tables/main_results.csv"
+
+equations:
+  - label: "(1)"
+    latex: "\\hat{y}_i = \\beta_0 + \\beta_1 T_i + \\beta_2 X_i + \\epsilon_i"
+    meaning: "Linear model estimating the treatment effect controlling for covariates."
+
+appendices:
+  - hed: "Appendix A. Supplemental Methods"
+    copy: |
+      Additional diagnostics, extended proofs, or algorithmic details.
+  - hed: "Appendix B. Survey Items"
+    copy: |
+      Full instrument text.
+
+# ---- References (CSL-style keys) --------------------------------------------
+# In text, cite as [@smith2021] or [@smith2021; @jones2022].
+references:
+  - id: "smith2021"
+    type: "article-journal"
+    title: "Title of prior article"
+    author: [{family: "Smith", given: "Jane"}, {family: "Lee", given: "Kai"}]
+    issued: {year: 2021}
+    container-title: "Journal of Important Results"
+    volume: "12"
+    issue: "3"
+    page: "45-67"
+    DOI: "10.0000/jir.2021.12345"
+    URL: "https://doi.org/10.0000/jir.2021.12345"
+  - id: "jones2022"
+    type: "paper-conference"
+    title: "Conference paper title"
+    author: [{family: "Jones", given: "Alex"}]
+    issued: {year: 2022}
+    container-title: "Proceedings of XYZ"
+    page: "101-110"
+    URL: "https://example.org/paper.pdf"
+
+# ---- Reproducibility & Project metadata -------------------------------------
+project:
+  repository: "https://github.com/yourorg/yourrepo"
+  environment: "conda env export > environment.yml"
+  license: "CC BY 4.0 (text), MIT (code)"
+
+# Intention meta (autofilled by the app if you use signals/scoring)
+intention_equation: "Clarity × Credibility × Evidence"
+meta:
+  equation: "Clarity × Credibility × Evidence"
+  signals: {}
+  ripple_score: 0.0
