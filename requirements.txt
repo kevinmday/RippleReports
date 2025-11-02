@@ -8,6 +8,6 @@ GitPython==3.1.43
 pypdf
 python-docx
 pytesseract
-streamlit-paste-button
+streamlit-paste-image-button
 Pillow
 requests
