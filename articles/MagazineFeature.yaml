@@ -1,0 +1,88 @@
+title: The Math of Rebalancing
+deck: How a city race reveals a national field repair—and what coherence looks like
+  in practice.
+author: Kevin Day
+date: 2025-10-31
+section: Tech + Society
+tags:
+- feature
+- field-dynamics
+- intention-theory
+audience: curious generalists, policy readers
+tone: narrative, sourced, image-rich
+format: Op-Ed
+intention_equation: Narrative Arc (Setup → Conflict → Resolution)
+nutgraf: 'In a season of noise, one race offers a measurable shift: coherence overtaking
+  chaos.
+
+  This story follows the numbers, the people, and the stakes.
+
+  '
+sections:
+- hed: I. The Static on America’s Radar
+  dek: How TTCF flooded the band and why it’s receding
+  copy: '[Scene-setter, reportage, quotes. Anchor with observable events/data.]
+
+    '
+- hed: II. The New York Node
+  dek: When local signal bleeds up the stack
+  copy: '[Explain the coupling K_M→N with accessible language; include reported detail.]
+
+    '
+- hed: III. Repair by Design
+  dek: Policy levers that raise UCIP without spiking TTCF
+  copy: '[Profiles, checks, and concrete interventions.]
+
+    '
+sidebars:
+- title: Equation 1 — The Coherence Differential
+  body: 'd(UCIP)/dt = α·K(S) − β·TTCF
+
+    '
+- title: Glossary
+  body: 'UCIP: Unified Coherence of Intention Pattern…
+
+    TTCF: Trump Tensor Chaos Factor…
+
+    '
+pull_quotes:
+- Every democracy has a resonant frequency. Push it too hard, and it shakes itself
+  apart.
+fact_boxes:
+- title: Current Readings
+  items:
+  - K_M→N ≈ 0.45
+  - FILS ≈ 0.62
+images:
+- path: images/feature-opener.jpg
+  caption: A race becomes a signal.
+  credit: 'Photo: …'
+- path: images/chart-ucip.png
+  caption: UCIP vs TTCF over time
+  credit: RippleWriter Studio
+sources:
+- title: City dataset
+  url: https://example.com/data
+- title: Peer-reviewed paper on polarization
+  url: https://example.com/paper
+meta:
+  equation: Narrative Arc (Setup → Conflict → Resolution)
+  signals: {}
+  ripple_score: 0.0
+slug: ''
+thesis: 'In the bottom of the ninth inning, Blue Jays third baseman Addison Barger
+  hit what many fans at the Rogers Centre thought was an inside-the-park home run
+  to left-center field. It was a clutch piece of hitting considering his team was
+  trailing 3-1 and there was already a man on first with no outs. Unfortunately for
+  the Blue Jays, the umpires determined that it was a lodge ball. As a result, it
+  was a ground-rule double.
+
+
+  '
+outline: []
+claims: []
+publish:
+  draft: false
+  category: oped
+  tags:
+  - ripplewriter

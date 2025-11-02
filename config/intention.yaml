@@ -1,0 +1,28 @@
+# RippleWriter Intention Config
+
+default_equation: "Clarity × Credibility × Resonance"
+
+equations:
+  blog: "Clarity × Credibility × Resonance"
+  magazine: "Narrative × Insight × Integrity"
+  research: "Evidence × Transparency × Replicability"
+  social: "Clarity × Emotion × Brevity"
+  oped: "Courage × Clarity × Context"
+
+weights:
+  Clarity: 0.35
+  Credibility: 0.30
+  Resonance: 0.35
+  Courage: 0.25
+  Emotion: 0.25
+  Context: 0.25
+  Evidence: 0.30
+  Transparency: 0.25
+  Replicability: 0.25
+  Narrative: 0.30
+  Integrity: 0.30
+  Insight: 0.30
+
+notes:
+  - "Weights can be adjusted dynamically by UCIP amplitude."
+  - "RippleWriter reads this first, then merges any YAML-draft overrides."

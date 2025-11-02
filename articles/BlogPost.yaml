@@ -1,0 +1,47 @@
+# filename: blog-your-slug.yaml
+title: "Run Fascists Run!"
+subtitle: "Why America’s ‘new’ strongman politics collapses under its own weight"
+author: "Kevin Day"
+date: 2025-10-31
+tags: [politics, democracy, intention-theory]
+audience: "general readers"
+tone: "plain-spoken, evidence-aware, forward-looking"
+outline:
+  - "Lede: hook, why now"
+  - "Body: main points"
+  - "Counterpoints & limits"
+  - "Conclusion / call to action"
+format: "Op-Ed"
+intention_equation: "Clarity × Credibility × Evidence"
+
+lede: |
+  Op-eds can be bold and honest when they show their receipts. Here’s why the current
+  'strongman' wave is structurally self-defeating.
+
+body: |
+  [Your main argument in ~3–5 paragraphs. Keep paragraphs short. Tie each claim to an
+  observable or cite below. Use your intention notes to steer emphasis.]
+
+counterpoints_limits: |
+  Smart readers expect you to steel-man the other side. Note valid concerns, boundary
+  conditions, and unknowns.
+
+conclusion: |
+  Close the loop. Actionable takeaways and next read.
+
+images:
+  - path: "images/strongman.jpg"
+    caption: "Authoritarian theatrics mask structural fragility."
+    credit: "Photo: …"
+
+sources:
+  - title: "Study on democratic backsliding"
+    url: "https://example.com/study"
+  - title: "Historical analysis"
+    url: "https://example.com/history"
+
+# Optional: these will be filled/updated by the app when you generate signals
+meta:
+  equation: "Clarity × Credibility × Evidence"
+  signals: {}
+  ripple_score: 0.0

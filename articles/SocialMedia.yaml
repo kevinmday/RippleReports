@@ -1,0 +1,71 @@
+# filename: social-your-slug.yaml
+title: "Run Fascists Run!"
+platforms: ["X", "Threads", "Facebook"]
+author: "Kevin Day"
+date: 2025-10-31
+format: "SocialMediaPost"
+intention_equation: "Clarity × Credibility × Resonance"
+audience: "general public, engaged readers"
+tone: "urgent but factual, clear, emotionally grounded"
+purpose: "Raise awareness, provoke reflection, promote link to full op-ed"
+
+post_variants:
+  - label: "X (Twitter)"
+    max_length: 280
+    style: "concise, punchy, uses intentional rhythm"
+    body: |
+      Fascism doesn’t march in with flags—it drips in with rhetoric.
+      Trump’s “new America” isn’t new. It’s entropy wrapped in ego.
+      Democracy doesn’t survive on autopilot. #RunFascistsRun
+
+    hashtags: ["#Democracy", "#IntentionTheory", "#RunFascistsRun"]
+    link: "https://yourblog.com/run-fascists-run"
+
+  - label: "Threads"
+    max_length: 500
+    style: "slightly longer, narrative, reflective"
+    body: |
+      The authoritarian playbook always starts the same way:
+      - Rewrite the truth
+      - Divide the base
+      - Pretend chaos is leadership
+
+      Trump’s “new America” is just the old entropy made louder.
+      #RunFascistsRun #IntentionTheory
+
+    hashtags: ["#Democracy", "#Authoritarianism", "#RippleTruth"]
+    link: "https://yourblog.com/run-fascists-run"
+
+  - label: "Facebook"
+    max_length: 1000
+    style: "story-driven, clear, shareable with link preview"
+    body: |
+      History repeats when people forget what it sounded like the first time.
+      Rhetoric becomes rot when it erodes trust, truth, and intention.
+      
+      The “new America” some cheer for is actually a retreat into chaos.
+      Read why: [Run Fascists Run] 👇
+      https://yourblog.com/run-fascists-run
+
+    hashtags: ["#Democracy", "#RippleWriterAI", "#RunFascistsRun"]
+    media:
+      - path: "images/run-fascists-cover.jpg"
+        caption: "Trump’s rhetoric isn’t leadership — it’s decay dressed as renewal."
+
+---
+
+metrics:
+  resonance_score: 0.0     # to be filled post-analysis
+  reach_estimate: 0        # platform API optional
+  intention_amplitude: 0.0 # UCIP field for social layer
+  ripple_score: 0.0
+
+sources:
+  - title: "Original op-ed"
+    url: "https://yourblog.com/run-fascists-run"
+  - title: "Cited data"
+    url: "https://example.com/data"
+
+meta:
+  equation: "Clarity × Credibility × Resonance"
+  signals: {}
