@@ -15,6 +15,4 @@ Pillow
 requests
 
 # --- Streamlit community components ---
-# Direct GitHub install (official source)
-git+https://github.com/andfanilo/streamlit-paste-button.git
-
+streamlit-paste-button-fork
