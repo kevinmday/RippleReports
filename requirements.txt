@@ -13,6 +13,3 @@ python-docx
 pytesseract
 Pillow
 requests
-
-# --- Streamlit community components ---
-streamlit-paste-button-fork
