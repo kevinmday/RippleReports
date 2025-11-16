@@ -1,0 +1,32 @@
+import streamlit as st
+
+def render_controls_panel():
+    # ================== BEGIN CONTROLS PANEL ==================
+    commit_msg = st.text_input("Commit message", value="Publish via RippleWriter Studio", key="commit_message_sidebar")
+    branch = st.text_input("Branch", value="main", key="branch_sidebar")
+
+    # --- RippleWriter Studio Sidebar Guide (Streamlit Expander) ---
+    with st.expander("RippleWriter Studio Guide"):
+        st.markdown("""
+**Purpose:**  
+RippleWriter Studio is your AI-assisted writing environment for composing, analyzing, and publishing articles powered by Intention Frameworks *(FILS, UCIP, RippleScore)*.  
+It transforms structured YAML inputs into full narrative builds.
+
+---
+
+### Writing Flow
+1. **Compose (YAML)** - create or select a draft and format  
+2. **Source + Draft** - add your text; merges with YAML metadata  
+3. **Meta-Analysis** - analyze tone, coherence, and RippleScore  
+4. **Preview** - review and publish your rendered article  
+
+---
+
+### Key Controls
+- **OpenAI API key** - enable live AI generation  
+- **Mock mode** - safe offline testing  
+    commit_msg = st.text_input("Commit message", value="Publish via RippleWriter Studio", key="commit_message_sidebar")
+    branch = st.text_input("Branch", value="main", key="branch_sidebar")
+- **Open output folder** - opens the `/output` directory  
+""")
+    # ================== END CONTROLS PANEL ====================

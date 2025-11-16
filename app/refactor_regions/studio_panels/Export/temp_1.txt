@@ -1,0 +1,5 @@
+f"""
+<div style="background-color:#0E1117; padding:12px; border-radius:14px; display:inline-block;">
+    <img src="{logo_path}" width="140">
+</div>
+"""

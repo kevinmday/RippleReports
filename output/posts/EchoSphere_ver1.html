@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EchoSphere Monitor</title>
+<style>
+  body {
+    background-color: #0f1116;
+    color: #e5e5e5;
+    font-family: "Inter", sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  header {
+    background-color: #1a1c23;
+    border-bottom: 1px solid #2a2d36;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  h1 {
+    font-size: 1.5em;
+    color: #00bfff;
+    margin: 0;
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .panel {
+    background-color: #1a1c23;
+    border: 1px solid #2a2d36;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.25);
+  }
+
+  .panel h2 {
+    color: #00bfff;
+    font-size: 1.15em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ---- RIPPLE GRID ---- */
+  .ripple-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 25px;
+    justify-items: center;
+    align-items: center;
+    margin-top: 20px;
+    padding: 8px;
+  }
+
+  .ripple-node {
+    position: relative;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+    text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    cursor: pointer;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  .ripple-node::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0.35;
+    animation: ripple 3s infinite ease-out;
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.7); opacity: 0.25; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 25px 6px rgba(0,191,255,0.4); }
+    50% { transform: scale(1.07); box-shadow: 0 0 40px 10px rgba(0,191,255,0.8); }
+  }
+
+  .hot { background: radial-gradient(circle, #ff4500, #ff9100); width: 115px; height: 115px; animation: pulse 2s infinite ease-in-out; }
+  .warm { background: radial-gradient(circle, #ffcc00, #ff9900); width: 90px; height: 90px; animation: pulse 3s infinite ease-in-out; }
+  .cool { background: radial-gradient(circle, #00bcd4, #2196f3); width: 75px; height: 75px; animation: pulse 4s infinite ease-in-out; }
+  .cold { background: radial-gradient(circle, #455a64, #263238); width: 60px; height: 60px; animation: pulse 5s infinite ease-in-out; }
+
+  .ripple-node:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 40px 15px rgba(0,191,255,0.9);
+  }
+
+  .story-card {
+    background-color: #21242d;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .story-card:hover { background-color: #2a2e38; }
+  .story-card h3 { font-size: 1em; color: #00bfff; margin: 0 0 5px; }
+  .story-card p { font-size: 0.9em; color: #bbb; margin: 0; }
+
+  footer {
+    text-align: center;
+    padding: 10px;
+    color: #555;
+    font-size: 0.8em;
+    border-top: 1px solid #2a2d36;
+  }
+
+  /* --- ChatGPT Discussion Box --- */
+  .chatgpt-box {
+    margin-top: 25px;
+    background-color: #21242d;
+    border: 1px solid #2a2d36;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 300px;
+  }
+
+  .chatgpt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .chatgpt-header h3 {
+    color: #00bfff;
+    font-size: 1em;
+    margin: 0;
+  }
+
+  .expand-btn {
+    background: none;
+    border: 1px solid #00bfff;
+    color: #00bfff;
+    border-radius: 6px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 0.8em;
+  }
+  .expand-btn:hover { background:#00bfff; color:#000; }
+
+  .chatgpt-discussion {
+    flex: 1;
+    background-color: #181a20;
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px;
+    overflow-y: auto;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+  }
+
+  .chatgpt-input {
+    display: flex;
+    gap: 5px;
+  }
+
+  .chatgpt-input textarea {
+    flex: 1;
+    background-color: #181a20;
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px;
+    resize: none;
+    height: 38px;
+    font-family: inherit;
+  }
+
+  .chatgpt-input button {
+    background-color: #00bfff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .chatgpt-input button:hover { background-color: #0095cc; }
+
+  /* --- Modal for Expand --- */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: #1a1c23;
+    border: 1px solid #2a2d36;
+    border-radius: 10px;
+    padding: 20px;
+    width: 70%;
+    height: 70%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 25px rgba(0,191,255,0.5);
+  }
+
+  .modal-content h2 { color: #00bfff; margin: 0 0 10px 0; }
+  .modal-discussion {
+    flex: 1;
+    background: #181a20;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .close-modal {
+    align-self: flex-end;
+    background: none;
+    border: 1px solid #00bfff;
+    color: #00bfff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .close-modal:hover { background:#00bfff; color:#000; }
+
+  /* --- System Pulse Hub --- */
+  .pulse-hub {
+    margin-top: 25px;
+    background: #21242d;
+    border: 1px solid #2a2d36;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .pulse-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .pulse-chip {
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .pulse-chip:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 18px rgba(0,191,255,0.5);
+  }
+  .pulse-chip.hot { background: linear-gradient(135deg, #ff3d00, #ff9100); }
+  .pulse-chip.warm { background: linear-gradient(135deg, #ffcc00, #ffaa00); }
+  .pulse-chip.cool { background: linear-gradient(135deg, #00bcd4, #2196f3); }
+  .pulse-chip.cold { background: linear-gradient(135deg, #455a64, #263238); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌐 EchoSphere Monitor</h1>
+  <span>System Status: <strong style="color:#00ff99;">Active</strong></span>
+</header>
+
+<div class="container">
+  <!-- LEFT PANEL -->
+  <div class="panel">
+    <h2>Feeds & Pipelines</h2>
+    <p><strong>RSS:</strong> 17 active<br>
+    <strong>Webhooks:</strong> 5 listening<br>
+    <strong>Discovery Agents:</strong> Enabled</p>
+    <hr>
+    <h2>Filter</h2>
+    <select style="width:100%; padding:5px; background:#21242d; color:#fff; border:1px solid #333; border-radius:6px;">
+      <option>All Categories</option>
+      <option>Politics</option>
+      <option>Markets</option>
+      <option>Science</option>
+      <option>Technology</option>
+      <option>Culture</option>
+    </select>
+
+    <!-- ChatGPT Discussion Box -->
+    <div class="chatgpt-box">
+      <div class="chatgpt-header">
+        <h3>ChatGPT Discussion</h3>
+        <button class="expand-btn" onclick="openModal('chat')">Expand</button>
+      </div>
+      <div class="chatgpt-discussion" id="discussion">
+        <p><strong>System:</strong> Ready for analysis. Ask about any hot topic.</p>
+      </div>
+      <div class="chatgpt-input">
+        <textarea id="userInput" placeholder="Ask about a trend, pipeline, or topic..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div class="panel">
+    <h2>What's Hot?</h2>
+    <div class="ripple-grid">
+      <div class="ripple-node hot">POL</div>
+      <div class="ripple-node warm">SCI</div>
+      <div class="ripple-node cool">TECH</div>
+      <div class="ripple-node hot">WAR</div>
+      <div class="ripple-node warm">ECO</div>
+      <div class="ripple-node cool">AI</div>
+      <div class="ripple-node cold">ART</div>
+      <div class="ripple-node warm">CLM</div>
+      <div class="ripple-node cool">MED</div>
+    </div>
+
+    <h2 style="margin-top:25px;">Recent Activity</h2>
+    <div class="story-card"><h3>“AI Legislation Sparks Debate in Congress”</h3><p>Category: Politics • Source: Reuters • 2m ago</p></div>
+    <div class="story-card"><h3>“Breakthrough Fusion Test Hits Net Energy Gain”</h3><p>Category: Science • Source: NYT • 8m ago</p></div>
+    <div class="story-card"><h3>“Tech Giants Brace for Antitrust Hearing”</h3><p>Category: Tech • Source: Bloomberg • 15m ago</p></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel">
+    <h2>Traceback & Pipeline Logic</h2>
+    <p>Click a story to view its source chain, classification path, and logic trace.</p>
+    <div class="story-card">
+      <h3>Selected: “AI Legislation Sparks Debate”</h3>
+      <p>→ RSS → Discovery Agent 3 → RippleTruth Classifier → Narrative Vector 0.92</p>
+    </div>
+    <hr>
+    <h2>System Meta</h2>
+    <p>CPU Load: 17%<br>
+    Intention Signals: 142<br>
+    Narrative Threads: 38<br>
+    Last Sync: 09:31 PST</p>
+
+    <h2>AI Connection</h2>
+    <p>OpenAI Key: <span style="color:#00ff99;">Active</span>
+      <button style="margin-left:10px; padding:4px 8px; border:1px solid #00bfff; background:#1a1c23; color:#00bfff; border-radius:6px; cursor:pointer;">Manage Keys</button>
+    </p>
+
+    <!-- System Pulse Hub -->
+    <div class="pulse-hub">
+      <h2>System Pulse Hub</h2>
+      <div class="pulse-grid">
+        <div class="pulse-chip hot" onclick="openModal('intention')" title="Intention Dynamics — FILS 0.84 | UCIP Drift +0.012">Intention</div>
+        <div class="pulse-chip warm" onclick="openModal('narrative')" title="Narrative Field — POL & AI trending">Narrative</div>
+        <div class="pulse-chip cool" onclick="openModal('truth')" title="RippleTruth Confidence 93%">Truth</div>
+        <div class="pulse-chip cool" onclick="openModal('ops')" title="System Health — CPU 17%, 0 errors">Ops</div>
+        <div class="pulse-chip warm" onclick="openModal('writer')" title="Writer Profile — Analytical tone, 8 interactions">Writer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Universal Modal -->
+<div id="universalModal" class="modal">
+  <div class="modal-content">
+    <button class="close-modal" onclick="closeModal()">✖ Close</button>
+    <h2 id="modalTitle">Deep Dive</h2>
+    <div class="modal-discussion" id="modalDiscussion">
+      <p>Details will load dynamically here depending on which metric you selected.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  RippleWriter EchoSphere © 2025 — Intention Intelligence for Writers
+</footer>
+
+<script>
+function sendMessage() {
+  const input = document.getElementById("userInput");
+  const discussion = document.getElementById("discussion");
+  if (!input.value.trim()) return;
+  const userMsg = document.createElement("p");
+  userMsg.innerHTML = `<strong>You:</strong> ${input.value}`;
+  discussion.appendChild(userMsg);
+
+  const reply = document.createElement("p");
+  reply.innerHTML = `<strong>ChatGPT:</strong> Processing...`;
+  discussion.appendChild(reply);
+
+  setTimeout(() => {
+    reply.innerHTML = `<strong>ChatGPT:</strong> Simulated response about "${input.value}" goes here.`;
+    discussion.scrollTop = discussion.scrollHeight;
+  }, 800);
+
+  input.value = "";
+  discussion.scrollTop = discussion.scrollHeight;
+}
+
+function openModal(type) {
+  const modal = document.getElementById("universalModal");
+  const title = document.getElementById("modalTitle");
+  const body = document.getElementById("modalDiscussion");
+  modal.style.display = "flex";
+  switch(type) {
+    case 'intention':
+      title.textContent = "Intention Dynamics";
+      body.innerHTML = "<p>FILS: 0.84 • UCIP Drift: +0.012<br>TTCF: Stable (Entropy Low)</p><p>Fractal Amplification visualizations will appear here.</p>";
+      break;
+    case 'narrative':
+      title.textContent = "Narrative Field";
+      body.innerHTML = "<p>Top Sectors: POL, AI, ECO<br>Ripple Crossovers detected between AI & POL threads.</p>";
+      break;
+    case 'truth':
+      title.textContent = "RippleTruth Confidence";
+      body.innerHTML = "<p>Confidence: 93%<br>Last Validation Check: Stable</p>";
+      break;
+    case 'ops':
+      title

@@ -1,0 +1,2 @@
+"""Initialize RippleWriter app package."""
+
