@@ -1,0 +1,119 @@
+# ===========================
+#  PYTHON / STREAMLIT
+# ===========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.pkl
+*.pyo
+*.$py.class
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+.conda/
+*.conda
+
+# Streamlit generated state
+.streamlit/secrets.toml
+.streamlit/*.yaml
+.streamlit/*.json
+
+# ===========================
+#  EDITOR / SYSTEM FILES
+# ===========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ===========================
+#  BACKUPS / TEMPORARY FILES
+# ===========================
+*.bak
+*.tmp
+*backup_*.py
+*app_backup*.py
+*__old_backups*/
+*backup_ripplewriter_*.py
+*backup_ripplewriter_foundation*.py
+
+# Old region prototypes
+app/refactor_regions/__old_backups/
+app/refactor_regions/*_old/
+app/refactor_regions/*_backup*/
+
+# ===========================
+#  EXPORTS / OUTPUT FILES
+# ===========================
+exports/
+*.pdf
+*.docx
+*.html
+output/
+dist/
+build/
+
+# ===========================
+#  SENSITIVE FILES
+# ===========================
+*key*
+*Key*
+*KEY*
+*api*
+*API*
+*secret*
+*SECRET*
+*_key.txt
+*.env
+*.pem
+*.cer
+
+# Explicit block:
+TestDayTodayOpenAIKey.txt
+
+# ===========================
+#  YAML DRAFTS
+# ===========================
+drafts/
+*.draft.yaml
+*.draft.yml
+*.yaml.backup
+*.yml.backup
+
+# ===========================
+#  IMAGES / SNAPSHOTS
+# ===========================
+*.png
+*.jpg
+*.jpeg
+*.gif
+snapshots/
+screenshots/
+images/generated/
+
+# ===========================
+#  LOGS
+# ===========================
+logs/
+*.log
+
+# ===========================
+#  COMPILED FILES
+# ===========================
+*.exe
+*.dll
+*.so
+
+# ===========================
+#  MISC
+# ===========================
+*.zip
+*.tar
+*.gz
+*.7z
